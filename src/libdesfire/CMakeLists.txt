@@ -1,0 +1,1 @@
+add_library(libdesfire Utils.cpp PN532.cpp Desfire.cpp AES128.cpp DES.cpp)

@@ -1,1 +1,1 @@
-add_library(libdesfire Utils.cpp PN532.cpp Desfire.cpp AES128.cpp DES.cpp)
+add_library(libdesfire Utils.cpp PN532.cpp Desfire.cpp Classic.cpp AES128.cpp DES.cpp)

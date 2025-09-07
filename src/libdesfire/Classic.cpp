@@ -25,10 +25,10 @@
                        etc..                  
                        0xA1,0xA2,0xA3,0xA4,0xA5,0xA6 }; // key for Sector 15
 **************************************************************************/
-bool Classic::DumpCardMemory(char s8_KeyType, const byte* u8_Keys, bool b_ShowAccessBits)
+bool Classic::DumpCardMemory(char s8_KeyType, const uint8_t* u8_Keys, bool b_ShowAccessBits)
 {
-    byte u8_UidLen; // 4 or 7
-    byte u8_Uid[8];
+    uint8_t u8_UidLen; // 4 or 7
+    uint8_t u8_Uid[8];
     eCardType e_CardType;
     if (!ReadPassiveTargetID(u8_Uid, &u8_UidLen, &e_CardType))
         return false;
@@ -40,7 +40,7 @@ bool Classic::DumpCardMemory(char s8_KeyType, const byte* u8_Keys, bool b_ShowAc
     }
 
     char s8_Buf[50];
-    byte u8_Data[20];
+    uint8_t u8_Data[20];
     for (int B=0; B<64; B++)
     {
         if  ((B % 4) == 0) // first block of sector
@@ -68,7 +68,7 @@ bool Classic::DumpCardMemory(char s8_KeyType, const byte* u8_Keys, bool b_ShowAc
             Utils::PrintHexBuf(u8_Data, 16);
 
             uint32_t u32_Value;
-            byte     u8_Address;
+            uint8_t u8_Address;
             if (GetValue(u8_Data, &u32_Value, &u8_Address))
             {
                 sprintf(s8_Buf, " Value[0x%02X]= %u", u8_Address, (unsigned int)u32_Value);
@@ -88,13 +88,13 @@ bool Classic::DumpCardMemory(char s8_KeyType, const byte* u8_Keys, bool b_ShowAc
     Dispay which Key has read/write access to data, the keys and the access bits.
     For more details see "Mifare KeyA, KeyB, Sector AccessBits.pdf"
 **************************************************************************/
-void Classic::ShowAccessBits(byte u8_Block, byte u8_Byte7, byte u8_Byte8)
+void Classic::ShowAccessBits(uint8_t u8_Block, uint8_t u8_Byte7, uint8_t u8_Byte8)
 {
-    byte C1 = u8_Byte7 >> 4;
-    byte C2 = u8_Byte8 & 0xF;
-    byte C3 = u8_Byte8 >> 4;
+    uint8_t C1 = u8_Byte7 >> 4;
+    uint8_t C2 = u8_Byte8 & 0xF;
+    uint8_t C3 = u8_Byte8 >> 4;
     
-    byte u8_Access[4];
+    uint8_t u8_Access[4];
     for (int i=0; i<4; i++)
     {
         u8_Access[i] = ((C1 & 1) << 2) | ((C2 & 1) << 1) | (C3 & 1);
@@ -141,9 +141,9 @@ void Classic::ShowAccessBits(byte u8_Block, byte u8_Byte7, byte u8_Byte8)
     pu32_Value  returns the value that has been read   (may be NULL)
     pu32_Adress returns the address that has been read (may be NULL)
 **************************************************************************/
-bool Classic::GetValue(byte* u8_Data, uint32_t* pu32_Value, byte* pu8_Address)
+bool Classic::GetValue(uint8_t* u8_Data, uint32_t* pu32_Value, uint8_t* pu8_Address)
 {
-    byte u8_Addr = u8_Data[12];
+    uint8_t u8_Addr = u8_Data[12];
     if (u8_Addr != 0xFF - u8_Data[13] ||
         u8_Addr != u8_Data[14]        ||
         u8_Addr != 0xFF - u8_Data[15])
@@ -169,11 +169,11 @@ bool Classic::GetValue(byte* u8_Data, uint32_t* pu32_Value, byte* pu8_Address)
     This function writes a 32 bit Value into a 16 byte data block in u8_Data
     For more details see "Mifare KeyA, KeyB, Sector AccessBits.pdf"
 **************************************************************************/
-void Classic::SetValue(byte* u8_Data, uint32_t u32_Value, byte u8_Address)
+void Classic::SetValue(uint8_t* u8_Data, uint32_t u32_Value, uint8_t u8_Address)
 {
     for (int i=0; i<4; i++)
     {
-        byte u8_Value = (byte)u32_Value;
+        uint8_t u8_Value = (uint8_t)u32_Value;
         u8_Data[i+0] = u8_Value;
         u8_Data[i+4] = 0xFF - u8_Value;
         u8_Data[i+8] = u8_Value;
@@ -219,11 +219,11 @@ void Classic::SetValue(byte* u8_Data, uint32_t u32_Value, byte u8_Address)
     u8_Uid     = a buffer with the UID of the card
     u8_UidLen  = length of UID (4 or 7 bytes)
 **************************************************************************/
-bool Classic::AuthenticateDataBlock(byte u8_Block, char s8_KeyType, const byte* u8_KeyData, const byte* u8_Uid, byte u8_UidLen) 
+bool Classic::AuthenticateDataBlock(uint8_t u8_Block, char s8_KeyType, const uint8_t* u8_KeyData, const uint8_t* u8_Uid, uint8_t u8_UidLen) 
 {
     if (mu8_DebugLevel > 0) Utils::Print("\r\n*** AuthenticateDataBlock()\r\n");
     
-    byte u8_Command;
+    uint8_t u8_Command;
     switch (s8_KeyType)
     { 
         case 'A': u8_Command = MIFARE_CMD_AUTH_A; break;
@@ -243,7 +243,7 @@ bool Classic::AuthenticateDataBlock(byte u8_Block, char s8_KeyType, const byte* 
     u8_Block  = 0..63 for 1KB cards, and 0..255 for 4KB cards
     u8_Data   = a buffer that receives the 16 bytes that have been read
 **************************************************************************/
-bool Classic::ReadDataBlock(byte u8_Block, byte* u8_Data)
+bool Classic::ReadDataBlock(uint8_t u8_Block, uint8_t* u8_Data)
 {
     if (mu8_DebugLevel > 0) Utils::Print("\r\n*** ReadDataBlock()\r\n");
     
@@ -256,7 +256,7 @@ bool Classic::ReadDataBlock(byte u8_Block, byte* u8_Data)
     u8_Block  = 0..63 for 1KB cards, and 0..255 for 4KB cards
     u8_Data   = a buffer with 16 bytes to be written
 **************************************************************************/
-bool Classic::WriteDataBlock(byte u8_Block, byte* u8_Data)
+bool Classic::WriteDataBlock(uint8_t u8_Block, uint8_t* u8_Data)
 {
     if (mu8_DebugLevel > 0) Utils::Print("\r\n*** WriteDataBlock()\r\n");
     
@@ -271,7 +271,7 @@ bool Classic::WriteDataBlock(byte u8_Block, byte* u8_Data)
     u8_Data    = 16 byte data buffer (output for read operation, input otherwise)
     u8_DataLen = length of u8_Data (set == 0 for command MIFARE_CMD_READ)
 **************************************************************************/
-bool Classic::DataExchange(byte u8_Command, byte u8_Block, byte* u8_Data, byte u8_DataLen)
+bool Classic::DataExchange(uint8_t u8_Command, uint8_t u8_Block, uint8_t* u8_Data, uint8_t u8_DataLen)
 {
     mu8_PacketBuffer[0] = PN532_COMMAND_INDATAEXCHANGE;
     mu8_PacketBuffer[1] = 1; // Card number (Logical target number)
@@ -283,7 +283,7 @@ bool Classic::DataExchange(byte u8_Command, byte u8_Block, byte* u8_Data, byte u
     if (!SendCommandCheckAck(mu8_PacketBuffer, 4 + u8_DataLen))
         return false;
   
-    byte len = ReadData(mu8_PacketBuffer, 26);
+    uint8_t len = ReadData(mu8_PacketBuffer, 26);
     if (len < 3 || mu8_PacketBuffer[1] != PN532_COMMAND_INDATAEXCHANGE + 1)
     {
         Utils::Print("DataExchange failed\r\n");

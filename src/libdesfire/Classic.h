@@ -22,16 +22,16 @@
 class Classic : public PN532
 {
   public:
-    bool DumpCardMemory(char s8_KeyType, const byte* u8_Keys, bool b_ShowAccessBits);
-    bool AuthenticateDataBlock(byte u8_Block, char s8_KeyType, const byte* u8_KeyData, const byte* u8_Uid, byte u8_UidLen);
-    bool ReadDataBlock (byte u8_Block, byte* u8_Data);
-    bool WriteDataBlock(byte u8_Block, byte* u8_Data);
-    bool GetValue(byte* u8_Data, uint32_t* pu32_Value, byte* pu8_Address);
-    void SetValue(byte* u8_Data, uint32_t   u32_Value, byte   u8_Address);
+    bool DumpCardMemory(char s8_KeyType, const uint8_t* u8_Keys, bool b_ShowAccessBits);
+    bool AuthenticateDataBlock(uint8_t u8_Block, char s8_KeyType, const uint8_t* u8_KeyData, const uint8_t* u8_Uid, uint8_t u8_UidLen);
+    bool ReadDataBlock (uint8_t u8_Block, uint8_t* u8_Data);
+    bool WriteDataBlock(uint8_t u8_Block, uint8_t* u8_Data);
+    bool GetValue(uint8_t* u8_Data, uint32_t* pu32_Value, uint8_t* pu8_Address);
+    void SetValue(uint8_t* u8_Data, uint32_t   u32_Value, uint8_t u8_Address);
    
  private:
-    bool DataExchange(byte u8_Command, byte u8_Block, byte* u8_Data, byte u8_DataLen);
-    void ShowAccessBits(byte u8_Block, byte u8_Byte7, byte u8_Byte8);    
+    bool DataExchange(uint8_t u8_Command, uint8_t u8_Block, uint8_t* u8_Data, uint8_t u8_DataLen);
+    void ShowAccessBits(uint8_t u8_Block, uint8_t u8_Byte7, uint8_t u8_Byte8);    
 };
 
 #endif

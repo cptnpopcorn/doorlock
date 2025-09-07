@@ -255,7 +255,7 @@ enum DESFireCmac
 class Desfire : public PN532
 {
  public:
-    Desfire();
+    Desfire(PN532Interface&);
     bool GetCardVersion(DESFireCardVersion* pk_Version);
     bool FormatCard();
     bool EnableRandomIDForever();

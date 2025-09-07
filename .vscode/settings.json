@@ -1,6 +1,7 @@
 {
     "files.associations": {
-        "chrono": "cpp",
-        "cstddef": "cpp"
-    }
+		"chrono": "cpp",
+		"cstddef": "cpp",
+		"span": "cpp"
+	}
 }

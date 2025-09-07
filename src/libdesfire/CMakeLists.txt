@@ -1,1 +1,2 @@
+set(CMAKE_CXX_STANDARD 23)
 add_library(libdesfire Utils.cpp PN532.cpp Desfire.cpp Classic.cpp AES128.cpp DES.cpp)

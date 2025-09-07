@@ -44,71 +44,14 @@
 **************************************************************************/
 
 #include "PN532.h"
+#include "PN532Interface.h"
 
 /**************************************************************************
     Constructor
 **************************************************************************/
-PN532::PN532()
+PN532::PN532(PN532Interface& interface) noexcept : interface{interface}
 {
-    mu8_ClkPin     = 0;
-    mu8_MisoPin    = 0;  
-    mu8_MosiPin    = 0;  
-    mu8_SselPin    = 0;  
-    mu8_ResetPin   = 0;
 }
-
-/**************************************************************************
-    Initializes for hardware I2C usage.
-    param  reset     The RSTPD_N pin
-**************************************************************************/
-#if USE_HARDWARE_I2C
-    void PN532::InitI2C(byte u8_Reset)
-    {
-        mu8_ResetPin = u8_Reset;
-        Utils::SetPinMode(mu8_ResetPin, OUTPUT);
-    }
-#endif
-
-/**************************************************************************
-    Initializes for software SPI usage.
-    param  clk       SPI clock pin (SCK)
-    param  miso      SPI MISO pin
-    param  mosi      SPI MOSI pin
-    param  sel       SPI chip select pin (CS/SSEL)
-    param  reset     Location of the RSTPD_N pin
-**************************************************************************/
-#if USE_SOFTWARE_SPI
-    void PN532::InitSoftwareSPI(byte u8_Clk, byte u8_Miso, byte u8_Mosi, byte u8_Sel, byte u8_Reset)
-    {
-        mu8_ClkPin     = u8_Clk;
-        mu8_MisoPin    = u8_Miso;
-        mu8_MosiPin    = u8_Mosi;
-        mu8_SselPin    = u8_Sel;
-        mu8_ResetPin   = u8_Reset;
-    
-        Utils::SetPinMode(mu8_ResetPin, OUTPUT);  
-        Utils::SetPinMode(mu8_SselPin,  OUTPUT);
-        Utils::SetPinMode(mu8_ClkPin,   OUTPUT);   
-        Utils::SetPinMode(mu8_MosiPin,  OUTPUT);
-        Utils::SetPinMode(mu8_MisoPin,  INPUT);
-    }
-#endif
-
-/**************************************************************************
-    Initializes for hardware SPI uage.
-    param  sel       SPI chip select pin (CS/SSEL)
-    param  reset     Location of the RSTPD_N pin
-**************************************************************************/
-#if USE_HARDWARE_SPI
-    void PN532::InitHardwareSPI(byte u8_Sel, byte u8_Reset)
-    {
-        mu8_SselPin  = u8_Sel;
-        mu8_ResetPin = u8_Reset;
-    
-        Utils::SetPinMode(mu8_ResetPin, OUTPUT);
-        Utils::SetPinMode(mu8_SselPin,  OUTPUT);
-    }
-#endif
 
 /**************************************************************************
     Reset the PN532, wake up and start communication
@@ -117,35 +60,14 @@ void PN532::begin()
 {
     if (mu8_DebugLevel > 0) Utils::Print("\r\n*** begin()\r\n");
 
-    Utils::WritePin(mu8_ResetPin, HIGH);
+    interface.DeassertResetAndPowerUp(); // RSTPD_N HIGH
     Utils::DelayMilli(10);
-    Utils::WritePin(mu8_ResetPin, LOW);
+    interface.AssertResetAndPowerDown(); // RSTPD_N LOW
     Utils::DelayMilli(400);
-    Utils::WritePin(mu8_ResetPin, HIGH);
+    interface.DeassertResetAndPowerUp(); // RSTPD_N HIGH
     Utils::DelayMilli(10);  // Small delay required before taking other actions after reset. See datasheet section 12.23, page 209.
-  
-    #if (USE_HARDWARE_SPI || USE_SOFTWARE_SPI) 
-    {
-        #if USE_HARDWARE_SPI
-            SpiClass::Begin(PN532_HARD_SPI_CLOCK);
-        #endif
 
-        // Wake up the PN532 (chapter 7.2.11) -> send a sequence of 0x55 (dummy bytes)
-        byte u8_Buffer[20];
-        memset(u8_Buffer, PN532_WAKEUP, sizeof(u8_Buffer));
-        SendPacket(u8_Buffer, sizeof(u8_Buffer));
-
-        if (mu8_DebugLevel > 1)
-        {
-            Utils::Print("Send WakeUp packet: ");
-            Utils::PrintHexBuf(u8_Buffer, sizeof(u8_Buffer), LF);
-        }
-    }
-    #elif USE_HARDWARE_I2C
-    {
-        I2cClass::Begin();
-    }
-    #endif
+	interface.StartDataTransport();
 }
 
 /**************************************************************************
@@ -184,7 +106,7 @@ bool PN532::GetFirmwareVersion(uint8_t* pIcType, uint8_t* pVersionHi, uint8_t* p
     *pIcType    = mu8_PacketBuffer[2];
     *pVersionHi = mu8_PacketBuffer[3];
     *pVersionLo = mu8_PacketBuffer[4];
-    *pFlags     = mu8_PacketBuffer[5];    
+    *pFlags     = mu8_PacketBuffer[5];
     return true;
 }
 
@@ -602,72 +524,6 @@ bool PN532::CheckPN532Status(uint8_t u8_Status)
 // ####                      LOW LEVEL FUNCTIONS                      #####
 // ########################################################################
 
-
-/**************************************************************************
-    Return true if the PN532 is ready with a response.
-**************************************************************************/
-bool PN532::IsReady() 
-{
-    #if (USE_HARDWARE_SPI || USE_SOFTWARE_SPI) 
-    {
-        Utils::WritePin(mu8_SselPin, LOW);
-        Utils::DelayMilli(2); // INDISPENSABLE!! Otherwise reads bullshit
-
-        if (mu8_DebugLevel > 2) Utils::Print("IsReady(): write STATUSREAD\r\n");
-
-        SpiWrite(PN532_SPI_STATUSREAD);
-        byte u8_Ready = SpiRead();
-
-        if (mu8_DebugLevel > 2)
-        {
-            Utils::Print("IsReady(): read ");
-            Utils::PrintHex8(u8_Ready, LF);
-        }
-    
-        Utils::WritePin(mu8_SselPin, HIGH);
-        Utils::DelayMicro(PN532_SOFT_SPI_DELAY);
-        
-        return u8_Ready == PN532_SPI_READY; // 0x01
-    }
-    #elif USE_HARDWARE_I2C
-    { 
-        // After reading this byte, the bus must be released with a Stop condition
-        I2cClass::RequestFrom((byte)PN532_I2C_ADDRESS, (byte)1);
-
-        // PN532 Manual chapter 6.2.4: Before the data bytes the chip sends a Ready byte.
-        byte u8_Ready = I2cClass::Read();
-        if (mu8_DebugLevel > 2)
-        {
-            Utils::Print("IsReady(): read ");
-            Utils::PrintHex8(u8_Ready, LF);
-        }        
-        
-        return u8_Ready == PN532_I2C_READY; // 0x01
-    }
-    #else
-    return false;
-    #endif
-}
-
-/**************************************************************************
-    Waits until the PN532 is ready.
-**************************************************************************/
-bool PN532::WaitReady() 
-{
-    uint16_t timer = 0;
-    while (!IsReady()) 
-    {
-        if (timer >= PN532_TIMEOUT) 
-        {
-            Utils::Print("WaitReady() -> TIMEOUT\r\n");
-            return false;
-        }
-        Utils::DelayMilli(10);
-        timer += 10;        
-    }
-    return true;
-}
-
 /**************************************************************************
     Sends a command and waits a specified period for the ACK
     param cmd       Pointer to the command buffer
@@ -692,7 +548,7 @@ bool PN532::SendCommandCheckAck(uint8_t *cmd, uint8_t cmdlen)
 void PN532::WriteCommand(uint8_t* cmd, uint8_t cmdlen)
 {
     uint8_t TxBuffer[PN532_PACKBUFFSIZE + 10];
-    int P=0;
+    size_t P=0;
     TxBuffer[P++] = PN532_PREAMBLE;    // 00
     TxBuffer[P++] = PN532_STARTCODE1;  // 00
     TxBuffer[P++] = PN532_STARTCODE2;  // FF
@@ -714,50 +570,13 @@ void PN532::WriteCommand(uint8_t* cmd, uint8_t cmdlen)
     TxBuffer[P++] = ~checksum;
     TxBuffer[P++] = PN532_POSTAMBLE; // 00
 
-    SendPacket(TxBuffer, P);
+	interface.Write({TxBuffer, P});
    
     if (mu8_DebugLevel > 1)
     {
         Utils::Print("Sending:  ");
         Utils::PrintHexBuf(TxBuffer, P, LF, 5, cmdlen + 6);
     }
-}
-
-/**************************************************************************
-    Send a data packet
-**************************************************************************/
-void PN532::SendPacket(uint8_t* buff, uint8_t len)
-{
-    #if (USE_HARDWARE_SPI || USE_SOFTWARE_SPI) 
-    {
-        Utils::WritePin(mu8_SselPin, LOW);
-        Utils::DelayMilli(2);  // INDISPENSABLE!!
-
-        if (mu8_DebugLevel > 2) Utils::Print("WriteCommand(): write DATAWRITE\r\n");
-        SpiWrite(PN532_SPI_DATAWRITE);
-
-        for (byte i=0; i<len; i++) 
-        {
-            SpiWrite(buff[i]);
-        }
-
-        Utils::WritePin(mu8_SselPin, HIGH);
-        Utils::DelayMicro(PN532_SOFT_SPI_DELAY);
-    }
-    #elif USE_HARDWARE_I2C
-    {
-        Utils::DelayMilli(2); // delay is for waking up the board
-    
-        I2cClass::BeginTransmission(PN532_I2C_ADDRESS);
-        for (byte i=0; i<len; i++) 
-        {
-            I2cClass::Write(buff[i]);
-        }   
-        I2cClass::EndTransmission();
-    }
-    #else
-    // NOP
-    #endif
 }
 
 /**************************************************************************
@@ -770,8 +589,7 @@ bool PN532::ReadAck()
     
     // ATTENTION: Never read more than 6 bytes here!
     // The PN532 has a bug in SPI mode which results in the first byte of the response missing if more than 6 bytes are read here!
-    if (!ReadPacket(ackbuff, sizeof(ackbuff)))
-        return false; // Timeout
+    if (!interface.Read({ackbuff, sizeof(ackbuff)})) return false; // Timeout
 
     if (mu8_DebugLevel > 2)
     {
@@ -804,7 +622,7 @@ uint8_t PN532::ReadData(uint8_t* buff, uint8_t len)
         return 0;
     }
     
-    if (!ReadPacket(RxBuffer, len))
+    if (!interface.Read({RxBuffer, len}))
         return 0; // timeout
 
     // The following important validity check was completely missing in Adafruit code (added by Elmü)
@@ -903,60 +721,4 @@ uint8_t PN532::ReadData(uint8_t* buff, uint8_t len)
     }
 
     return dataLength;
-}
-
-/**************************************************************************
-    Reads n bytes of data from the PN532 via SPI or I2C and does NOT check for valid data.
-    param  buff      Pointer to the buffer where data will be written
-    param  len       Number of bytes to read
-**************************************************************************/
-bool PN532::ReadPacket(uint8_t* buff, uint8_t len)
-{ 
-    if (!WaitReady())
-        return false;
-        
-    #if (USE_HARDWARE_SPI || USE_SOFTWARE_SPI) 
-    {
-        Utils::WritePin(mu8_SselPin, LOW);
-        Utils::DelayMilli(2); // INDISPENSABLE!! Otherwise reads bullshit
-
-        if (mu8_DebugLevel > 2)  Utils::Print("ReadPacket(): write DATAREAD\r\n");
-        SpiWrite(PN532_SPI_DATAREAD);
-    
-        for (byte i=0; i<len; i++) 
-        {
-            Utils::DelayMilli(1);
-            buff[i] = SpiRead();
-        }
-    
-        Utils::WritePin(mu8_SselPin, HIGH);
-        Utils::DelayMicro(PN532_SOFT_SPI_DELAY);
-        return true;
-    }
-    #elif USE_HARDWARE_I2C
-    {
-        Utils::DelayMilli(2);
-    
-        // read (n+1 to take into account leading Ready byte)
-        I2cClass::RequestFrom((byte)PN532_I2C_ADDRESS, (byte)(len+1));
-
-        // PN532 Manual chapter 6.2.4: Before the data bytes the chip sends a Ready byte.
-        // It is ignored here because it has been checked already in isready()
-        byte u8_Ready = I2cClass::Read();
-        if (mu8_DebugLevel > 2)
-        {
-            Utils::Print("ReadPacket(): read ");
-            Utils::PrintHex8(u8_Ready, LF);
-        }        
-        
-        for (byte i=0; i<len; i++) 
-        {
-            Utils::DelayMilli(1);
-            buff[i] = I2cClass::Read();
-        }
-        return true;
-    }
-    #else
-    return false;
-    #endif
 }

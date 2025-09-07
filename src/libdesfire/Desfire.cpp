@@ -34,8 +34,8 @@
 #include "Desfire.h"
 #include "Secrets.h"
 
-Desfire::Desfire() 
-    : mi_CmacBuffer(mu8_CmacBuffer_Data, sizeof(mu8_CmacBuffer_Data))
+Desfire::Desfire(PN532Interface& interface)
+    : PN532{interface}, mi_CmacBuffer{mu8_CmacBuffer_Data, sizeof(mu8_CmacBuffer_Data)}
 {
     mpi_SessionKey       = NULL;
     mu8_LastAuthKeyNo    = NOT_AUTHENTICATED;

@@ -5,38 +5,7 @@
 #include <chrono>
 #include <thread>
 
-// *********************************************************************************
-// The following switches define how the Teensy communicates with the PN532 board.
-// For the DoorOpener sketch the only valid option is Software SPI.
-// For other projects with the PN532 you may change this.
-// ATTENTION: Only one of the following defines must be set to true!
-// NOTE: In Software SPI mode there is no external libraray required. Only 4 regular digital pins are used.
-// If you want to transfer the code to another processor the easiest way will be to use Software SPI mode.
-#define USE_SOFTWARE_SPI   TRUE   // Visual Studio needs this in upper case
-#define USE_HARDWARE_SPI   FALSE  // Visual Studio needs this in upper case
-#define USE_HARDWARE_I2C   FALSE  // Visual Studio needs this in upper case
-// ********************************************************************************/
-
-
-#if USE_HARDWARE_SPI
-    #include <SPI.h>  // Hardware SPI bus
-#elif USE_HARDWARE_I2C
-    #include <Wire.h> // Hardware I2C bus
-#elif USE_SOFTWARE_SPI
-    // no #include required
-#endif
-
 #define LF  "\r\n" // LineFeed 
-
-// Teensy definitions for digital pins:
-#ifndef INPUT
-    #define OUTPUT   0x1
-    #define INPUT    0x0
-    #define HIGH     0x1
-    #define LOW      0x0
-#endif
-
-// -------------------------------------------------------------------------------------------------------------------
 
 // USB connection to Terminal program (Teraterm) on PC via COM port
 // You can leave all functions empty and only redirect Print() to printf().
@@ -69,72 +38,6 @@ public:
         //Serial.print(s8_Text);
     }
 };
-
-// -------------------------------------------------------------------------------------------------------------------
-
-#if USE_HARDWARE_SPI
-    // This class implements Hardware SPI (4 wire bus). It is not used for the DoorOpener sketch.
-    // NOTE: This class is not used when you switched to I2C mode with PN532::InitI2C() or Software SPI mode with PN532::InitSoftwareSPI().
-    class SpiClass
-    {  
-    public:
-        static inline void Begin(uint32_t u32_Clock) 
-        {
-            SPI.begin();
-            SPI.beginTransaction(SPISettings(u32_Clock, LSBFIRST, SPI_MODE0));
-        }
-        // Write one byte to the MOSI pin and at the same time receive one byte on the MISO pin.
-        static inline byte Transfer(byte u8_Data) 
-        {
-            return SPI.transfer(u8_Data);
-        }
-    };
-#endif
-
-// -------------------------------------------------------------------------------------------------------------------
-
-#if USE_HARDWARE_I2C
-    // This class implements Hardware I2C (2 wire bus with pull-up resistors). It is not used for the DoorOpener sketch.
-    // NOTE: This class is not used when you switched to SPI mode with PN532::InitSoftwareSPI() or PN532::InitHardwareSPI().
-    class I2cClass
-    {  
-    public:
-        // Initialize the I2C pins
-        static inline void Begin() 
-        {
-            Wire.begin();
-        }
-        // --------------------- READ -------------------------
-        // Read the requested amount of bytes at once from the I2C bus into an internal buffer.
-        // ATTENTION: The Arduino library is extremely primitive. A timeout has not been implemented.
-        // When the CLK line is permanently low this function hangs forever!
-        static inline byte RequestFrom(byte u8_Address, byte u8_Quantity)
-        {
-            return Wire.requestFrom(u8_Address, u8_Quantity);
-        }
-        // Read one byte from the buffer that has been read when calling RequestFrom()
-        static inline int Read()
-        {
-            return Wire.read();
-        }
-        // --------------------- WRITE -------------------------
-        // Initiates a Send transmission
-        static inline void BeginTransmission(byte u8_Address)
-        {
-            Wire.beginTransmission(u8_Address);
-        }
-        // Write one byte to the I2C bus
-        static inline void Write(byte u8_Data)
-        {
-            Wire.write(u8_Data);
-        }
-        // Ends a Send transmission
-        static inline void EndTransmission()
-        {
-            Wire.endTransmission();
-        }
-    };
-#endif
 
 // -------------------------------------------------------------------------------------------------------------------
 

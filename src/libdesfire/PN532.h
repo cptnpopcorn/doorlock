@@ -138,10 +138,12 @@ enum eCardType
 	CARD_DesRandom = 3, // A Desfire card with 4 byte random UID  (bit 0 + 1)
 };
 
+class PN532Interface;
+
 class PN532
 {
 public:
-	PN532();
+	PN532(PN532Interface&) noexcept;
 
 #if USE_SOFTWARE_SPI
 	void InitSoftwareSPI(byte u8_Clk, byte u8_Miso, byte u8_Mosi, byte u8_Sel, byte u8_Reset);
@@ -181,17 +183,9 @@ protected:
 
 private:
 	void WriteCommand(uint8_t *cmd, uint8_t cmdlen);
-	bool ReadPacket(uint8_t *buff, uint8_t len);
-	void SendPacket(uint8_t *buff, uint8_t len);
 	bool ReadAck();
-	bool WaitReady();
-	bool IsReady();
 
-	uint8_t mu8_ClkPin;
-	uint8_t mu8_MisoPin;
-	uint8_t mu8_MosiPin;
-	uint8_t mu8_SselPin;
-	uint8_t mu8_ResetPin;
+	PN532Interface& interface;
 };
 
 #endif

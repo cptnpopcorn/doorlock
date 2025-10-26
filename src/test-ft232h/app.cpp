@@ -96,24 +96,27 @@ int main(int, char**)
 			const auto getFirmwareVersion = to_array<uint8_t>({0x02});
 			pn532.WriteFrame().DataFromHost(getFirmwareVersion);
 			
-
-			pn532.ReadFrame(make_frame_writer(
+			auto ack_writer = make_frame_writer(
 				[]{ throw runtime_error{"LCS invalid"}; },
 				[]{ cout << "ACK received" << endl << flush; },
 				[]{ throw runtime_error{"NACKed"}; },
 				[]{ throw runtime_error{"TFI invalid"}; },
-				[&writeResponseData] -> auto&& { return NullTargetDataWriter::Default(); },
-				[&validate] -> auto&& { return NullTargetDataValidator::Default(); },
-				[]{}));
+				[] -> auto&& { return NullTargetDataWriter::Default(); },
+				[] -> auto&& { return NullTargetDataValidator::Default(); },
+				[]{});
 
-			pn532.ReadFrame(make_frame_writer(
+			pn532.ReadFrame(ack_writer);
+
+			auto frame_writer = make_frame_writer(
 				[]{ throw runtime_error{"LCS invalid"}; },
 				[]{ throw runtime_error{"unexpected ACK"};},
 				[]{ throw runtime_error{"NACKed"}; },
 				[]{ throw runtime_error{"TFI invalid"}; },
 				[&writeResponseData] -> auto&& { return writeResponseData; },
 				[&validate] -> auto&& { return validate; },
-				[]{}));
+				[]{});
+
+			pn532.ReadFrame(frame_writer);
 
 			pn532.WriteFrame().Ack();
 		}

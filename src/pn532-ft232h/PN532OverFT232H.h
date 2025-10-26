@@ -21,10 +21,7 @@ public:
 
 	void StartDataTransport() override;
 	ControllerFrameWriter& WriteFrame() override;
-	void ReadFrame(TargetFrameWriter &&writer) override;
-
-	size_t Write(const std::span<uint8_t const>& data) override; // TODO: remove
-	size_t Read(const std::span<uint8_t>& data) override; // TODO: remove
+	void ReadFrame(TargetFrameWriter &writer) override;
 
 private:
 

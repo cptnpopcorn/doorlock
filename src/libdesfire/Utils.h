@@ -64,30 +64,6 @@ public:
     {
         std::this_thread::sleep_for(std::chrono::microseconds(s32_MicroSeconds));
     }
-    
-    // Defines if a digital processor pin is used as input or output
-    // u8_Mode = INPUT or OUTPUT
-    // If you compile on Visual Studio see WinDefines.h   
-    static inline void SetPinMode(uint8_t u8_Pin, uint8_t u8_Mode)
-    {
-        //pinMode(u8_Pin, u8_Mode);
-    }
-    
-    // Sets a digital processor pin high or low.
-    // u8_Status = HIGH or LOW
-    // If you compile on Visual Studio see WinDefines.h
-    static inline void WritePin(uint8_t u8_Pin, uint8_t u8_Status)
-    {
-        //digitalWrite(u8_Pin, u8_Status);
-    }
-
-    // reads the current state of a digital processor pin.
-    // returns HIGH or LOW
-    // If you compile on Visual Studio see WinDefines.h   
-    static inline uint8_t ReadPin(uint8_t u8_Pin)
-    {
-        return 0; // digitalRead(u8_Pin);
-    }
 
     static uint64_t GetMillis64();
     static void     Print(const char*   s8_Text,  const char* s8_LF=NULL);

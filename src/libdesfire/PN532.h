@@ -3,21 +3,6 @@
 
 #include "Utils.h"
 
-// ----------------------------------------------------------------------
-
-// This parameter may be used to slow down the software SPI bus speed.
-// This is required when there is a long cable between the PN532 and the Teensy.
-// This delay in microseconds (not milliseconds!) is made between toggeling the CLK line.
-// Use an oscilloscope to check the resulting speed!
-// A value of 50 microseconds results in a clock signal of 10 kHz
-// A value of 0 results in maximum speed (depends on CPU speed).
-// This parameter is not used for hardware SPI mode.
-#define PN532_SOFT_SPI_DELAY 50
-
-// The clock (in Hertz) when using Hardware SPI mode
-// This parameter is not used for software SPI mode.
-#define PN532_HARD_SPI_CLOCK 1000000
-
 // The maximum time to wait for an answer from the PN532
 // Do NOT use infinite timeouts like in Adafruit code!
 #define PN532_TIMEOUT 1000
@@ -26,14 +11,6 @@
 #define PN532_PACKBUFFSIZE 80
 
 // ----------------------------------------------------------------------
-
-#define PN532_PREAMBLE (0x00)
-#define PN532_STARTCODE1 (0x00)
-#define PN532_STARTCODE2 (0xFF)
-#define PN532_POSTAMBLE (0x00)
-
-#define PN532_HOSTTOPN532 (0xD4)
-#define PN532_PN532TOHOST (0xD5)
 
 // PN532 Commands
 #define PN532_COMMAND_DIAGNOSE (0x00)
@@ -144,16 +121,6 @@ class PN532
 {
 public:
 	PN532(PN532Interface&) noexcept;
-
-#if USE_SOFTWARE_SPI
-	void InitSoftwareSPI(byte u8_Clk, byte u8_Miso, byte u8_Mosi, byte u8_Sel, byte u8_Reset);
-#endif
-#if USE_HARDWARE_SPI
-	void InitHardwareSPI(byte u8_Sel, byte u8_Reset);
-#endif
-#if USE_HARDWARE_I2C
-	void InitI2C(byte u8_Reset);
-#endif
 
 	// Generic PN532 functions
 	void begin();

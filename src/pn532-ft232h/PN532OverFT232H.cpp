@@ -77,16 +77,6 @@ void PN532OverFT232H::DataFromHost(const std::span<uint8_t const> &data)
 	}
 }
 
-size_t PN532OverFT232H::Write(const span<uint8_t const> &data)
-{
-	return ft232h.WriteI2C(data, I2C_TRANSFER_OPTIONS_NO_ADDRESS | I2C_TRANSFER_OPTIONS_BREAK_ON_NACK);
-}
-
-size_t PN532OverFT232H::Read(const span<uint8_t> &data)
-{
-	return 0;
-}
-
 class stop_read_guard final
 {
 public:
@@ -106,7 +96,7 @@ private:
 	Ft232h &ft232h;
 };
 
-void PN532OverFT232H::ReadFrame(TargetFrameWriter &&writer)
+void PN532OverFT232H::ReadFrame(TargetFrameWriter &writer)
 {
 	uint8_t rdy {0b0};
 	Timer t {timeout};

@@ -45,6 +45,17 @@
 
 #include "PN532.h"
 #include "PN532Interface.h"
+#include "ControllerFrameWriter.h"
+#include "FrameWriterFuncs.h"
+#include "TargetDataWriterFuncs.h"
+#include "TargetDataValidatorFuncs.h"
+#include "NullTargetDataWriter.h"
+#include "NullTargetDataValidator.h"
+
+#include <algorithm>
+#include <span>
+
+using namespace std;
 
 /**************************************************************************
     Constructor
@@ -547,62 +558,31 @@ bool PN532::SendCommandCheckAck(uint8_t *cmd, uint8_t cmdlen)
 **************************************************************************/
 void PN532::WriteCommand(uint8_t* cmd, uint8_t cmdlen)
 {
-    uint8_t TxBuffer[PN532_PACKBUFFSIZE + 10];
-    size_t P=0;
-    TxBuffer[P++] = PN532_PREAMBLE;    // 00
-    TxBuffer[P++] = PN532_STARTCODE1;  // 00
-    TxBuffer[P++] = PN532_STARTCODE2;  // FF
-    TxBuffer[P++] = cmdlen + 1;
-    TxBuffer[P++] = 0xFF - cmdlen;
-    TxBuffer[P++] = PN532_HOSTTOPN532; // D4
-    
-    for (uint8_t i=0; i<cmdlen; i++) 
-    {
-        TxBuffer[P++] = cmd[i];
-    }
-
-    uint8_t checksum = 0;
-    for (uint8_t i=0; i<P; i++) 
-    {
-       checksum += TxBuffer[i];
-    }
-
-    TxBuffer[P++] = ~checksum;
-    TxBuffer[P++] = PN532_POSTAMBLE; // 00
-
-	interface.Write({TxBuffer, P});
-   
-    if (mu8_DebugLevel > 1)
-    {
-        Utils::Print("Sending:  ");
-        Utils::PrintHexBuf(TxBuffer, P, LF, 5, cmdlen + 6);
-    }
+	interface.WriteFrame().DataFromHost(span<uint8_t>{cmd, cmdlen});
 }
 
 /**************************************************************************
     Read the ACK packet (acknowledge)
 **************************************************************************/
-bool PN532::ReadAck() 
+bool PN532::ReadAck() // TODO: if there is something else than ACK or corruption, we should just abandon everything
 {
-    const uint8_t Ack[] = {0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00};
-    uint8_t ackbuff[sizeof(Ack)];
-    
-    // ATTENTION: Never read more than 6 bytes here!
-    // The PN532 has a bug in SPI mode which results in the first byte of the response missing if more than 6 bytes are read here!
-    if (!interface.Read({ackbuff, sizeof(ackbuff)})) return false; // Timeout
+	try
+	{
+		auto ack_writer = make_frame_writer(
+			[]{ throw runtime_error{"LCS invalid"}; },
+			[]{}, // the ACK we are looking for
+			[]{ throw runtime_error{"NACKed"}; },
+			[]{ throw runtime_error{"TFI invalid"}; },
+			[] -> TargetDataWriter& { throw runtime_error{"unexpected data"}; },
+			[] -> TargetDataValidator& { throw runtime_error{"unexpected error"}; },
+			[]{});
+	}
+	catch (runtime_error e)
+	{
+		return false;
+	}
 
-    if (mu8_DebugLevel > 2)
-    {
-        Utils::Print("Read ACK: ");
-        Utils::PrintHexBuf(ackbuff, sizeof(ackbuff), LF);
-    }
-    
-    if (memcmp(ackbuff, Ack, sizeof(Ack)) != 0)
-    {
-        Utils::Print("*** No ACK frame received\r\n");
-        return false;
-    }
-    return true;
+	return true;
 }
 
 /**************************************************************************
@@ -612,113 +592,33 @@ bool PN532::ReadAck()
     returns the number of bytes that have been copied to buff (< len) or 0 on error
 **************************************************************************/
 uint8_t PN532::ReadData(uint8_t* buff, uint8_t len) 
-{ 
-    uint8_t RxBuffer[PN532_PACKBUFFSIZE];
-        
-    const uint8_t MIN_PACK_LEN = 2 /*start bytes*/ + 2 /*length + length checksum */ + 1 /*checksum*/;
-    if (len < MIN_PACK_LEN || len > PN532_PACKBUFFSIZE)
-    {
-        Utils::Print("ReadData(): len is invalid\r\n");
-        return 0;
-    }
-    
-    if (!interface.Read({RxBuffer, len}))
-        return 0; // timeout
+{	
+	auto validate = make_target_data_validator(
+		[]{},
+		[]{ throw runtime_error{"DCS invalid"}; });
 
-    // The following important validity check was completely missing in Adafruit code (added by Elmü)
-    // PN532 documentation says (chapter 6.2.1.6): 
-    // Before the start code (0x00 0xFF) there may be any number of additional bytes that must be ignored.
-    // After the checksum there may be any number of additional bytes that must be ignored.
-    // This function returns ONLY the pure data bytes:
-    // any leading bytes -> skipped (never seen, but documentation says to ignore them)
-    // preamble   0x00   -> skipped (optional, the PN532 does not send it always!!!!!)
-    // start code 0x00   -> skipped
-    // start code 0xFF   -> skipped
-    // length            -> skipped
-    // length checksum   -> skipped
-    // data[0...n]       -> returned to the caller (first byte is always 0xD5)
-    // checksum          -> skipped
-    // postamble         -> skipped (optional, the PN532 may not send it!)
-    // any bytes behind  -> skipped (never seen, but documentation says to ignore them)
+	size_t write_pos {0};
 
-    const char* Error = NULL;
-    int Brace1 = -1;
-    int Brace2 = -1;
-    int dataLength = 0;
-    do
-    {
-        int startCode = -1;
-        for (int i=0; i<=len-MIN_PACK_LEN; i++)
-        {
-            if (RxBuffer[i]   == PN532_STARTCODE1 && 
-                RxBuffer[i+1] == PN532_STARTCODE2)
-            {
-                startCode = i;
-                break;
-            }
-        }
+	auto write_data = make_target_data_writer(
+		[buff = as_const(buff), len = as_const(len), &write_pos](const span<uint8_t const>& data)
+		{
+			const auto fill_length = min(len - write_pos, data.size());
+			ranges::copy(data.subspan(0, fill_length), buff + write_pos);
+			write_pos += fill_length;
+			return data.size();
+		},
+		[&validate] -> auto&& { return validate; });
 
-        if (startCode < 0)
-        {
-            Error = "ReadData() -> No Start Code\r\n";
-            break;
-        }
-        
-        int pos = startCode + 2;
-        dataLength      = RxBuffer[pos++];
-        int lengthCheck = RxBuffer[pos++];
-        if ((dataLength + lengthCheck) != 0x100)
-        {
-            Error = "ReadData() -> Invalid length checksum\r\n";
-            break;
-        }
-    
-        if (len < startCode + MIN_PACK_LEN + dataLength)
-        {
-            Error = "ReadData() -> Packet is longer than requested length\r\n";
-            break;
-        }
+	auto frame_writer = make_frame_writer(
+		[]{ throw runtime_error{"LCS invalid"}; },
+		[]{}, // the ACK we are looking for
+		[]{ throw runtime_error{"NACKed"}; },
+		[]{ throw runtime_error{"TFI invalid"}; },
+		[&write_data] -> auto& { return write_data; },
+		[] -> TargetDataValidator& { throw runtime_error{"unexpected error"}; },
+		[]{ throw runtime_error{"frame incomplete"}; });
 
-        Brace1 = pos;
-        for (int i=0; i<dataLength; i++)
-        {
-            buff[i] = RxBuffer[pos++]; // copy the pure data bytes in the packet
-        }
-        Brace2 = pos;
+	interface.ReadFrame(frame_writer);
 
-        // All returned data blocks must start with PN532TOHOST (0xD5)
-        if (dataLength < 1 || buff[0] != PN532_PN532TOHOST) 
-        {
-            Error = "ReadData() -> Invalid data (no PN532TOHOST)\r\n";
-            break;
-        }
-    
-        uint8_t checkSum = 0;
-        for (int i=startCode; i<pos; i++)
-        {
-            checkSum += RxBuffer[i];
-        }
-    
-        if (checkSum != (uint8_t)(~RxBuffer[pos]))
-        {
-            Error = "ReadData() -> Invalid checksum\r\n";
-            break;
-        }
-    }
-    while(false); // This is not a loop. Avoids using goto by using break.
-
-    // Always print the package, even if it was invalid.
-    if (mu8_DebugLevel > 1)
-    {
-        Utils::Print("Response: ");
-        Utils::PrintHexBuf(RxBuffer, len, LF, Brace1, Brace2);
-    }
-    
-    if (Error)
-    {
-        Utils::Print(Error);
-        return 0;
-    }
-
-    return dataLength;
+	return static_cast<uint8_t>(write_pos);
 }

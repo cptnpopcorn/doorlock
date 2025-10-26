@@ -13,12 +13,9 @@ public:
 	virtual void AssertResetAndPowerDown() = 0;
 	virtual void DeassertResetAndPowerUp() = 0;
 
-	virtual size_t Write(const std::span<uint8_t const>& data) = 0; // TODO: remove
-	virtual size_t Read(const std::span<uint8_t>& data) = 0; // TODO: remove
-
 	virtual void StartDataTransport() = 0;
 	virtual ControllerFrameWriter& WriteFrame() = 0;
-	virtual void ReadFrame(TargetFrameWriter &&writer) = 0;
+	virtual void ReadFrame(TargetFrameWriter &writer) = 0;
 
 protected:
 	PN532Interface() = default;

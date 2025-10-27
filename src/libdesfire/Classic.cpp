@@ -283,25 +283,25 @@ bool Classic::DataExchange(uint8_t u8_Command, uint8_t u8_Block, uint8_t* u8_Dat
     if (!SendCommandCheckAck(mu8_PacketBuffer, 4 + u8_DataLen))
         return false;
   
-    uint8_t len = ReadData(mu8_PacketBuffer, 26);
-    if (len < 3 || mu8_PacketBuffer[1] != PN532_COMMAND_INDATAEXCHANGE + 1)
+    uint8_t len = ReadData(mu8_PacketBuffer, 25);
+    if (len < 2 || mu8_PacketBuffer[0] != PN532_COMMAND_INDATAEXCHANGE + 1)
     {
         Utils::Print("DataExchange failed\r\n");
         return false;
     }
 
     // Check the status byte from the PN532 (returns 3 bytes in case of error)
-    if (!CheckPN532Status(mu8_PacketBuffer[2]))
+    if (!CheckPN532Status(mu8_PacketBuffer[1]))
         return false;
 
     if (u8_Command == MIFARE_CMD_READ)
     {
-        if (len < 19)
+        if (len < 18)
         {
             Utils::Print("DataExchange returned invalid data\r\n");
             return false;
         }
-        memcpy(u8_Data, mu8_PacketBuffer + 3, 16);
+        memcpy(u8_Data, mu8_PacketBuffer + 2, 16);
     }   
     return true;
 }

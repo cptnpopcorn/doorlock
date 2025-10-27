@@ -1041,16 +1041,15 @@ int Desfire::DataExchange(TxBuffer* pi_Command,               // in (command + p
         pi_Params = &i_Empty;
 
     // The response for INDATAEXCHANGE is always: 
-    // - 0xD5
     // - 0x41
     // - Status byte from PN532        (0 if no error)
     // - Status byte from Desfire card (0 if no error)
     // - data bytes ...
-    int s32_Overhead = 11; // Overhead added to payload = 11 bytes = 7 bytes for PN532 frame + 3 bytes for INDATAEXCHANGE response + 1 card status byte
+    int s32_Overhead = 10; // Overhead added to payload = 11 bytes = 6 bytes for PN532 frame + 3 bytes for INDATAEXCHANGE response + 1 card status byte
     if (e_Mac & MAC_Rmac) s32_Overhead += 8; // + 8 bytes for CMAC
   
     // mu8_PacketBuffer is used for input and output
-    if (2 + pi_Command->GetCount() + pi_Params->GetCount() > PN532_PACKBUFFSIZE || s32_Overhead + s32_RecvSize > PN532_PACKBUFFSIZE)    
+    if (2 + pi_Command->GetCount() + pi_Params->GetCount() > PN532_PACKBUFFSIZE || s32_Overhead + s32_RecvSize > PN532_PACKBUFFSIZE)
     {
         Utils::Print("DataExchange(): Invalid parameters\r\n");
         return -1;
@@ -1141,19 +1140,19 @@ int Desfire::DataExchange(TxBuffer* pi_Command,               // in (command + p
 
     // ReadData() returns 3 byte if status error from the PN532
     // ReadData() returns 4 byte if status error from the Desfire card
-    if (s32_Len < 3 || mu8_PacketBuffer[1] != PN532_COMMAND_INDATAEXCHANGE + 1)
+    if (s32_Len < 2 || mu8_PacketBuffer[0] != PN532_COMMAND_INDATAEXCHANGE + 1)
     {
         Utils::Print("DataExchange() failed\r\n");
         return -1;
     }
 
     // Here we get two status bytes that must be checked
-    uint8_t u8_PN532Status = mu8_PacketBuffer[2]; // contains errors from the PN532
-    uint8_t u8_CardStatus  = mu8_PacketBuffer[3]; // contains errors from the Desfire card
+    uint8_t u8_PN532Status = mu8_PacketBuffer[1]; // contains errors from the PN532
+    uint8_t u8_CardStatus  = mu8_PacketBuffer[2]; // contains errors from the Desfire card
 
     mu8_LastPN532Error = u8_PN532Status;
 
-    if (!CheckPN532Status(u8_PN532Status) || s32_Len < 4)
+    if (!CheckPN532Status(u8_PN532Status) || s32_Len < 3)
         return -1;
 
     // After any error that the card has returned the authentication is invalidated.
@@ -1169,7 +1168,7 @@ int Desfire::DataExchange(TxBuffer* pi_Command,               // in (command + p
     if (pe_Status)
        *pe_Status = (DESFireStatus)u8_CardStatus;
 
-    s32_Len -= 4; // 3 bytes for INDATAEXCHANGE response + 1 byte card status
+    s32_Len -= 3; // 2 bytes for INDATAEXCHANGE response + 1 byte card status
 
     // A CMAC may be appended to the end of the frame.
     // The CMAC calculation is important because it maintains the IV of the session key up to date.
@@ -1190,7 +1189,7 @@ int Desfire::DataExchange(TxBuffer* pi_Command,               // in (command + p
         // This is an intermediate frame. More frames will follow. There is no CMAC in the response yet.
         if (u8_CardStatus == ST_MoreFrames)
         {
-            if (!mi_CmacBuffer.AppendBuf(mu8_PacketBuffer + 4, s32_Len))
+            if (!mi_CmacBuffer.AppendBuf(mu8_PacketBuffer + 3, s32_Len))
                 return -1;
         }
         
@@ -1199,10 +1198,10 @@ int Desfire::DataExchange(TxBuffer* pi_Command,               // in (command + p
         {
             s32_Len -= 8; // Do not return the received CMAC to the caller and do not include it into the CMAC calculation
           
-            uint8_t* u8_RxMac = mu8_PacketBuffer + 4 + s32_Len;
+            uint8_t* u8_RxMac = mu8_PacketBuffer + 3 + s32_Len;
             
             // The CMAC is calculated over the RX data + the status byte appended to the END of the RX data!
-            if (!mi_CmacBuffer.AppendBuf(mu8_PacketBuffer + 4, s32_Len) ||
+            if (!mi_CmacBuffer.AppendBuf(mu8_PacketBuffer + 3, s32_Len) ||
                 !mi_CmacBuffer.AppendUint8(u8_CardStatus))
                 return -1;
 
@@ -1232,7 +1231,7 @@ int Desfire::DataExchange(TxBuffer* pi_Command,               // in (command + p
 
     if (u8_RecvBuf && s32_Len)
     {
-        memcpy(u8_RecvBuf, mu8_PacketBuffer + 4, s32_Len);
+        memcpy(u8_RecvBuf, mu8_PacketBuffer + 3, s32_Len);
 
         if (e_Mac & MAC_Rcrypt) // decrypt received data with session key
         {

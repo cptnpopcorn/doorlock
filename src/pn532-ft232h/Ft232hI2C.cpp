@@ -1,5 +1,5 @@
-#include "Ft232h.h"
-#include "Timer.h"
+#include "Ft232hI2C.h"
+#include <Timer.h>
 #include <libmpsse_i2c.h>
 #include <algorithm>
 #include <stdexcept>
@@ -10,12 +10,11 @@
 using namespace std;
 using namespace std::chrono;
 
-Ft232h::Ft232h() noexcept : isValid{false}, handle{}, i2cAddr{}
+Ft232hI2c::Ft232hI2c() noexcept : handle{}, i2cAddr{}
 {
 }
 
-Ft232h::Ft232h(FT_HANDLE handle, uint8_t i2cAddr, uint8_t gpioMask, const milliseconds& timeout) noexcept :
-	isValid{true},
+Ft232hI2c::Ft232hI2c(FT_HANDLE handle, uint8_t i2cAddr, uint8_t gpioMask, const milliseconds& timeout) noexcept :
 	handle{handle},
 	i2cAddr{i2cAddr},
 	gpioMask{gpioMask},
@@ -23,22 +22,24 @@ Ft232h::Ft232h(FT_HANDLE handle, uint8_t i2cAddr, uint8_t gpioMask, const millis
 {
 }
 
-Ft232h::Ft232h(Ft232h &&other) : Ft232h()
+Ft232hI2c::Ft232hI2c(Ft232hI2c &&other) noexcept : Ft232hI2c()
 {
 	Swap(other);
 }
 
-Ft232h &Ft232h::operator=(Ft232h &&other)
+Ft232hI2c &Ft232hI2c::operator=(Ft232hI2c &&other) noexcept
 {
 	Swap(other);
 	return *this;
 }
 
-void error(FT_STATUS s) { throw runtime_error { "FTDI error " + to_string(s) }; }
+inline void error(FT_STATUS s) { throw runtime_error { "FTDI error " + to_string(s) }; }
 
-size_t Ft232h::WriteI2C(const span<uint8_t const> &data, DWORD options) const
+size_t Ft232hI2c::Write(const span<uint8_t const> &data, DWORD options) const
 {
 	DWORD size {0};
+	uint8_t safeZero {};
+	const auto buffer = data.size() == 0 ? &safeZero : const_cast<uint8_t*>(data.data());
 
 	for (Timer t {timeout}; t.IsRunning(); t.Update())
 	{
@@ -46,7 +47,7 @@ size_t Ft232h::WriteI2C(const span<uint8_t const> &data, DWORD options) const
 			handle,
 			i2cAddr,
 			static_cast<DWORD>(data.size()),
-			const_cast<uint8_t*>(data.data()),
+			buffer,
 			&size,
 			options);
 		
@@ -57,7 +58,7 @@ size_t Ft232h::WriteI2C(const span<uint8_t const> &data, DWORD options) const
 				return size;
 
 			case FT_DEVICE_NOT_FOUND:
-				this_thread::sleep_for(1ms);
+				this_thread::sleep_for(5ms);
 				continue;
 			
 			default:
@@ -69,10 +70,11 @@ size_t Ft232h::WriteI2C(const span<uint8_t const> &data, DWORD options) const
 	return 0;
 }
 
-size_t Ft232h::ReadI2C(const std::span<uint8_t> &data, DWORD options) const
+size_t Ft232hI2c::Read(const std::span<uint8_t> &data, DWORD options) const
 {
 	DWORD size {0};
 	uint8_t safeZero;
+	const auto buffer = data.size() == 0 ? &safeZero : data.data();
 
 	for (Timer t {timeout}; t.IsRunning(); t.Update())
 	{
@@ -80,7 +82,7 @@ size_t Ft232h::ReadI2C(const std::span<uint8_t> &data, DWORD options) const
 			handle,
 			i2cAddr,
 			static_cast<DWORD>(data.size()),
-			data.size() == 0 ? &safeZero : data.data(),
+			buffer,
 			&size,
 			options);
 
@@ -90,7 +92,7 @@ size_t Ft232h::ReadI2C(const std::span<uint8_t> &data, DWORD options) const
 				return size;
 
 			case FT_DEVICE_NOT_FOUND:
-				this_thread::sleep_for(1ms);
+				this_thread::sleep_for(5ms);
 				continue;
 			
 			default:
@@ -102,20 +104,14 @@ size_t Ft232h::ReadI2C(const std::span<uint8_t> &data, DWORD options) const
 	return 0;
 }
 
-void Ft232h::WriteGPIO(uint8_t bits) const
+void Ft232hI2c::WriteGPIO(uint8_t bits) const
 {
-	FT_WriteGPIO(handle, gpioMask, bits);
+	const auto status = FT_WriteGPIO(handle, gpioMask, bits);
+	if (status != FT_OK) error(status);
 }
 
-Ft232h::~Ft232h()
+void Ft232hI2c::Swap(Ft232hI2c &other) noexcept
 {
-	if (!isValid) return;
-	isValid = false;
-}
-
-void Ft232h::Swap(Ft232h &other) noexcept
-{
-	swap(isValid, other.isValid);
 	swap(handle, other.handle);
 	swap(i2cAddr, other.i2cAddr);
 	swap(timeout, other.timeout);

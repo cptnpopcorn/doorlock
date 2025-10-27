@@ -49,6 +49,10 @@ private:
 	size_t DcsLength() const noexcept;
 	size_t ParseDcs(const std::span<uint8_t const>& data);
 
+	void ContinueWithPostamble() noexcept;
+	size_t PostambleLength() const noexcept;
+	size_t ParsePostamble(const std::span<uint8_t const>& data);
+
 	void Done();
 	size_t DoneLength() const noexcept;
 	size_t ParseDone(const std::span<uint8_t const>& data);

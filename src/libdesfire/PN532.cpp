@@ -107,17 +107,17 @@ bool PN532::GetFirmwareVersion(uint8_t* pIcType, uint8_t* pVersionHi, uint8_t* p
     if (!SendCommandCheckAck(mu8_PacketBuffer, 1))
         return 0;
 
-    uint8_t len = ReadData(mu8_PacketBuffer, 13);
-    if (len != 6 || mu8_PacketBuffer[1] != PN532_COMMAND_GETFIRMWAREVERSION + 1)
+    uint8_t len = ReadData(mu8_PacketBuffer, 5);
+    if (len != 5 || mu8_PacketBuffer[0] != PN532_COMMAND_GETFIRMWAREVERSION + 1)
     {
         Utils::Print("GetFirmwareVersion failed\r\n");
         return false;
     }
 
-    *pIcType    = mu8_PacketBuffer[2];
-    *pVersionHi = mu8_PacketBuffer[3];
-    *pVersionLo = mu8_PacketBuffer[4];
-    *pFlags     = mu8_PacketBuffer[5];
+    *pIcType    = mu8_PacketBuffer[1];
+    *pVersionHi = mu8_PacketBuffer[2];
+    *pVersionLo = mu8_PacketBuffer[3];
+    *pFlags     = mu8_PacketBuffer[4];
     return true;
 }
 
@@ -136,8 +136,8 @@ bool PN532::SamConfig(void)
     if (!SendCommandCheckAck(mu8_PacketBuffer, 4))
         return false;
   
-    uint8_t len = ReadData(mu8_PacketBuffer, 9);
-    if (len != 2 || mu8_PacketBuffer[1] != PN532_COMMAND_SAMCONFIGURATION + 1)
+    uint8_t len = ReadData(mu8_PacketBuffer, 1);
+    if (len != 1 || mu8_PacketBuffer[0] != PN532_COMMAND_SAMCONFIGURATION + 1)
     {
         Utils::Print("SamConfig failed\r\n");
         return false;
@@ -161,13 +161,14 @@ bool PN532::SetPassiveActivationRetries()
     if (!SendCommandCheckAck(mu8_PacketBuffer, 5))
         return false;
   
-    uint8_t len = ReadData(mu8_PacketBuffer, 9);
-    if (len != 2 || mu8_PacketBuffer[1] != PN532_COMMAND_RFCONFIGURATION + 1)
+    uint8_t len = ReadData(mu8_PacketBuffer, 1);
+    if (len != 1 || mu8_PacketBuffer[0] != PN532_COMMAND_RFCONFIGURATION + 1)
     {
         Utils::Print("SetPassiveActivationRetries failed\r\n");
         return false;
     }
-    return true;
+		
+	return true;
 }
 
 /**************************************************************************
@@ -187,8 +188,8 @@ bool PN532::SwitchOffRfField()
     if (!SendCommandCheckAck(mu8_PacketBuffer, 3))
         return false;
   
-    uint8_t len = ReadData(mu8_PacketBuffer, 9);
-    if (len != 2 || mu8_PacketBuffer[1] != PN532_COMMAND_RFCONFIGURATION + 1)
+    uint8_t len = ReadData(mu8_PacketBuffer, 1);
+    if (len != 1 || mu8_PacketBuffer[0] != PN532_COMMAND_RFCONFIGURATION + 1)
     {
         Utils::Print("SwitchOffRfField failed\r\n");
         return false;
@@ -238,8 +239,8 @@ bool PN532::WriteGPIO(bool P30, bool P31, bool P33, bool P35)
     if (!SendCommandCheckAck(mu8_PacketBuffer, 3))
         return false;
   
-    uint8_t len = ReadData(mu8_PacketBuffer, 9);
-    if (len != 2 || mu8_PacketBuffer[1] != PN532_COMMAND_WRITEGPIO + 1)
+    uint8_t len = ReadData(mu8_PacketBuffer, 1);
+    if (len != 1 || mu8_PacketBuffer[0] != PN532_COMMAND_WRITEGPIO + 1)
     {
         Utils::Print("WriteGPIO failed\r\n");
         return false;
@@ -279,25 +280,24 @@ bool PN532::ReadPassiveTargetID(uint8_t* u8_UidBuffer, uint8_t* pu8_UidLength, e
     ISO14443A card response:
     mu8_PacketBuffer Description
     -------------------------------------------------------
-    b0               D5 (always) (PN532_PN532TOHOST)
-    b1               4B (always) (PN532_COMMAND_INLISTPASSIVETARGET + 1)
-    b2               Amount of cards found
-    b3               Tag number (always 1)
-    b4,5             SENS_RES (ATQA = Answer to Request Type A)
-    b6               SEL_RES  (SAK  = Select Acknowledge)
-    b7               UID Length
-    b8..Length       UID (4 or 7 bytes)
+    b0               4B (always) (PN532_COMMAND_INLISTPASSIVETARGET + 1)
+    b1               Amount of cards found
+    b2               Tag number (always 1)
+    b3,4             SENS_RES (ATQA = Answer to Request Type A)
+    b5               SEL_RES  (SAK  = Select Acknowledge)
+    b6               UID Length
+    b7..Length       UID (4 or 7 bytes)
     nn               ATS Length     (Desfire only)
     nn..Length-1     ATS data bytes (Desfire only)
     */ 
-    uint8_t len = ReadData(mu8_PacketBuffer, 28);
-    if (len < 3 || mu8_PacketBuffer[1] != PN532_COMMAND_INLISTPASSIVETARGET + 1)
+    uint8_t len = ReadData(mu8_PacketBuffer, 27);
+    if (len < 2 || mu8_PacketBuffer[0] != PN532_COMMAND_INLISTPASSIVETARGET + 1)
     {
         Utils::Print("ReadPassiveTargetID failed\r\n");
         return false;
     }   
 
-    uint8_t cardsFound = mu8_PacketBuffer[2]; 
+    uint8_t cardsFound = mu8_PacketBuffer[1]; 
     if (mu8_DebugLevel > 0)
     {
         Utils::Print("Cards found: "); 
@@ -306,7 +306,7 @@ bool PN532::ReadPassiveTargetID(uint8_t* u8_UidBuffer, uint8_t* pu8_UidLength, e
     if (cardsFound != 1)
         return true; // no card found -> this is not an error!
 
-    uint8_t u8_IdLength = mu8_PacketBuffer[7];
+    uint8_t u8_IdLength = mu8_PacketBuffer[6];
     if (u8_IdLength != 4 && u8_IdLength != 7)
     {
         Utils::Print("Card has unsupported UID length: ");
@@ -314,12 +314,12 @@ bool PN532::ReadPassiveTargetID(uint8_t* u8_UidBuffer, uint8_t* pu8_UidLength, e
         return true; // unsupported card found -> this is not an error!
     }   
 
-    std::memcpy(u8_UidBuffer, mu8_PacketBuffer + 8, u8_IdLength);    
+    std::memcpy(u8_UidBuffer, mu8_PacketBuffer + 7, u8_IdLength);    
     *pu8_UidLength = u8_IdLength;
 
     // See "Mifare Identification & Card Types.pdf" in the ZIP file
-    uint16_t u16_ATQA = ((uint16_t)mu8_PacketBuffer[4] << 8) | mu8_PacketBuffer[5];
-    uint8_t     u8_SAK   = mu8_PacketBuffer[6];
+    uint16_t u16_ATQA = ((uint16_t)mu8_PacketBuffer[3] << 8) | mu8_PacketBuffer[4];
+    uint8_t     u8_SAK   = mu8_PacketBuffer[5];
 
     if (u8_IdLength == 7 && u8_UidBuffer[0] != 0x80 && u16_ATQA == 0x0344 && u8_SAK == 0x20) *pe_CardType = CARD_Desfire;
     if (u8_IdLength == 4 && u8_UidBuffer[0] == 0x80 && u16_ATQA == 0x0304 && u8_SAK == 0x20) *pe_CardType = CARD_DesRandom;
@@ -363,14 +363,14 @@ bool PN532::SelectCard()
     if (!SendCommandCheckAck(mu8_PacketBuffer, 2))
         return false;
   
-    uint8_t len = ReadData(mu8_PacketBuffer, 10);
-    if (len < 3 || mu8_PacketBuffer[1] != PN532_COMMAND_INSELECT + 1)
+    uint8_t len = ReadData(mu8_PacketBuffer, 9);
+    if (len < 2 || mu8_PacketBuffer[0] != PN532_COMMAND_INSELECT + 1)
     {
         Utils::Print("Select failed\r\n");
         return false;
     }
 
-    return CheckPN532Status(mu8_PacketBuffer[2]);
+    return CheckPN532Status(mu8_PacketBuffer[1]);
 }
 
 /**************************************************************************
@@ -392,14 +392,14 @@ bool PN532::DeselectCard()
     if (!SendCommandCheckAck(mu8_PacketBuffer, 2))
         return false;
   
-    uint8_t len = ReadData(mu8_PacketBuffer, 10);
-    if (len < 3 || mu8_PacketBuffer[1] != PN532_COMMAND_INDESELECT + 1)
+    uint8_t len = ReadData(mu8_PacketBuffer, 9);
+    if (len < 2 || mu8_PacketBuffer[0] != PN532_COMMAND_INDESELECT + 1)
     {
         Utils::Print("Deselect failed\r\n");
         return false;
     }
 
-    return CheckPN532Status(mu8_PacketBuffer[2]);
+    return CheckPN532Status(mu8_PacketBuffer[1]);
 }
 
 /**************************************************************************
@@ -417,14 +417,14 @@ bool PN532::ReleaseCard()
     if (!SendCommandCheckAck(mu8_PacketBuffer, 2))
         return false;
   
-    uint8_t len = ReadData(mu8_PacketBuffer, 10);
-    if (len < 3 || mu8_PacketBuffer[1] != PN532_COMMAND_INRELEASE + 1)
+    uint8_t len = ReadData(mu8_PacketBuffer, 9);
+    if (len < 2 || mu8_PacketBuffer[0] != PN532_COMMAND_INRELEASE + 1)
     {
         Utils::Print("Release failed\r\n");
         return false;
     }
 
-    return CheckPN532Status(mu8_PacketBuffer[2]);
+    return CheckPN532Status(mu8_PacketBuffer[1]);
 }
 
 /**************************************************************************
@@ -559,6 +559,7 @@ bool PN532::SendCommandCheckAck(uint8_t *cmd, uint8_t cmdlen)
 void PN532::WriteCommand(uint8_t* cmd, uint8_t cmdlen)
 {
 	interface.WriteFrame().DataFromHost(span<uint8_t>{cmd, cmdlen});
+	this_thread::sleep_for(1ms);
 }
 
 /**************************************************************************
@@ -571,13 +572,15 @@ bool PN532::ReadAck() // TODO: if there is something else than ACK or corruption
 		auto ack_writer = make_frame_writer(
 			[]{ throw runtime_error{"LCS invalid"}; },
 			[]{}, // the ACK we are looking for
-			[]{ throw runtime_error{"NACKed"}; },
+			[]{ throw runtime_error{"NACKed"}; }, // well: it seems for some operations NACK is expected - that should be specified as a parameter
 			[]{ throw runtime_error{"TFI invalid"}; },
 			[] -> TargetDataWriter& { throw runtime_error{"unexpected data"}; },
 			[] -> TargetDataValidator& { throw runtime_error{"unexpected error"}; },
 			[]{});
+
+		interface.ReadFrame(ack_writer);
 	}
-	catch (runtime_error e)
+	catch (exception e)
 	{
 		return false;
 	}
@@ -618,7 +621,13 @@ uint8_t PN532::ReadData(uint8_t* buff, uint8_t len)
 		[] -> TargetDataValidator& { throw runtime_error{"unexpected error"}; },
 		[]{ throw runtime_error{"frame incomplete"}; });
 
-	interface.ReadFrame(frame_writer);
+	if (!interface.ReadFrame(frame_writer)) return 0;
+
+	this_thread::sleep_for(2ms);
+
+	interface.WriteFrame().Ack();
+
+	this_thread::sleep_for(5ms);
 
 	return static_cast<uint8_t>(write_pos);
 }

@@ -29,7 +29,7 @@ FrameParser::~FrameParser()
 	if (GetRequiredLength() != 0) writer.FrameIncomplete();
 }
 
-size_t FrameParser::StartLength() const noexcept { return 4; } // shortest possible is ACK
+size_t FrameParser::StartLength() const noexcept { return 5; } // shortest possible is ACK
 
 constexpr tuple<uint8_t, uint8_t> start_code { 0x00, 0xFF };
 
@@ -66,7 +66,7 @@ void FrameParser::ContinueWithLength() noexcept
 	numLastOctets = 0;
 }
 
-size_t FrameParser::LengthLength() const noexcept { return 2 - numLastOctets; } // we might stop at bad LCS for short format or 2 bytes ACK or NACK
+size_t FrameParser::LengthLength() const noexcept { return 3 - numLastOctets; } // we might stop at bad LCS for short format or 2 bytes ACK or NACK plus postamble
 
 inline constexpr tuple<uint8_t, uint8_t> ack_code { start_code }; // same ;)
 inline constexpr tuple<uint8_t, uint8_t> nack_code { 0xFF, 0x00 };
@@ -87,25 +87,26 @@ size_t FrameParser::ParseLength(const std::span<uint8_t const> &data)
 
 	const auto seq = make_tuple(lastOctets[0], *it++);
 	const auto consumed = it - data.cbegin();
+	const auto left = data.cend() - it;
 
 	if (seq == ack_code)
 	{
 		writer.Ack();
-		Done();
-		return consumed;
+		ContinueWithPostamble();
+		return consumed + ParsePostamble(data.last(left));
 	}
 
 	if (seq == nack_code)
 	{
 		writer.Nack();
-		Done();
-		return consumed;
+		ContinueWithPostamble();
+		return consumed + ParsePostamble(data.last(left));
 	}
 
 	if (seq == extended_code)
 	{
 		ContinueWithExtendedLength();
-		return consumed + ParseExtendedLength(data.last(data.cend() - it));
+		return consumed + ParseExtendedLength(data.last(left));
 	}
 
 	const auto& len = get<0>(seq);
@@ -117,8 +118,6 @@ size_t FrameParser::ParseLength(const std::span<uint8_t const> &data)
 		Done();
 		return consumed;
 	}
-
-	const auto left = data.cend() - it;
 
 	if (len == 1)
 	{
@@ -136,7 +135,7 @@ void FrameParser::ContinueWithExtendedLength() noexcept
 	numLastOctets = 0;
 }
 
-size_t FrameParser::ExtendedLengthLength() const noexcept { return 3 - numLastOctets; } // at least lenM, lenL and FCS
+size_t FrameParser::ExtendedLengthLength() const noexcept { return 4 - numLastOctets; } // at least lenM, lenL and FCS and postamble
 
 size_t FrameParser::ParseExtendedLength(const std::span<uint8_t const> &data)
 {
@@ -172,7 +171,7 @@ void FrameParser::ContinueWithTfi(size_t dataLength) noexcept
 	this->dataLength = dataLength;
 }
 
-size_t FrameParser::TfiLength() const noexcept { return dataLength + 2; } // tfi, data, dcs
+size_t FrameParser::TfiLength() const noexcept { return dataLength + 3; } // tfi, data, dcs and postamble
 
 size_t FrameParser::ParseTfi(const std::span<uint8_t const> &data)
 {
@@ -206,7 +205,7 @@ void FrameParser::ContinueWithData(TargetDataWriter &dataWriter) noexcept
 	this->dataWriter = &dataWriter;
 }
 
-size_t FrameParser::DataLength() const noexcept { return dataLength + 1; } // actual data + dcs
+size_t FrameParser::DataLength() const noexcept { return dataLength + 2; } // actual data + dcs + postamble
 
 size_t FrameParser::ParseData(const std::span<uint8_t const> &data)
 {
@@ -228,7 +227,7 @@ void FrameParser::ContinueWithError() noexcept
 	state = { &FrameParser::ErrorLength, &FrameParser::ParseError };
 }
 
-size_t FrameParser::ErrorLength() const noexcept { return 2; } // error code, dcs
+size_t FrameParser::ErrorLength() const noexcept { return 3; } // error code, dcs, postamble
 
 size_t FrameParser::ParseError(const std::span<uint8_t const> &data)
 {
@@ -252,7 +251,7 @@ void FrameParser::ContinueWithDcs(TargetDataValidator &dataValidator) noexcept
 	this->dataValidator = &dataValidator;
 }
 
-size_t FrameParser::DcsLength() const noexcept { return 1; }
+size_t FrameParser::DcsLength() const noexcept { return 2; } // dcs + postamble
 
 size_t FrameParser::ParseDcs(const std::span<uint8_t const> &data)
 {
@@ -261,6 +260,7 @@ size_t FrameParser::ParseDcs(const std::span<uint8_t const> &data)
 
 	const auto& dcs = *it++;
 	const auto consumed = it - data.cbegin();
+	const auto left = data.cend() - it;
 
 	if ((dataSum + dcs & 0xFF) == 0x00)
 	{
@@ -270,6 +270,21 @@ size_t FrameParser::ParseDcs(const std::span<uint8_t const> &data)
 	{
 		dataValidator->DcsInvalid();
 	}
+
+	ContinueWithPostamble();
+	return consumed + ParsePostamble(data.last(left));
+}
+
+void FrameParser::ContinueWithPostamble() noexcept { state = { &FrameParser::PostambleLength, &FrameParser::ParsePostamble }; }
+
+size_t FrameParser::PostambleLength() const noexcept { return 1; }
+
+size_t FrameParser::ParsePostamble(const std::span<uint8_t const> &data)
+{
+	auto it = data.cbegin();
+	if (it == data.cend()) return 0;
+
+	const auto consumed = ++it - data.cbegin();
 
 	Done();
 	return consumed;

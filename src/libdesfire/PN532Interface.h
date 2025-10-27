@@ -15,7 +15,7 @@ public:
 
 	virtual void StartDataTransport() = 0;
 	virtual ControllerFrameWriter& WriteFrame() = 0;
-	virtual void ReadFrame(TargetFrameWriter &writer) = 0;
+	virtual bool ReadFrame(TargetFrameWriter &writer) = 0; // false for timeout, other errors handled by writer
 
 protected:
 	PN532Interface() = default;

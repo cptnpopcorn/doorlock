@@ -1,4 +1,4 @@
-#include <PN532OverFT232H.h>
+#include <PN532OverFT232HI2C.h>
 #include <FrameWriterFuncs.h>
 #include <NullTargetDataWriter.h>
 #include <NullTargetDataValidator.h>
@@ -10,6 +10,7 @@
 
 #include <array>
 #include <iostream>
+#include <iomanip>
 #include <stdexcept>
 
 using namespace std;
@@ -40,7 +41,7 @@ private:
     FT_HANDLE channel;
 };
 
-template<class T> void printhex(const T& bytes)
+template<class T> static void printhex(const T& bytes)
 {
     for (const auto c : bytes)
     {
@@ -71,7 +72,7 @@ int main(int, char**)
 		ChannelConfig config { .ClockRate { I2C_CLOCK_STANDARD_MODE }, .LatencyTimer { 16 } };
 		if (log_status(I2C_InitChannel(channel, &config), "configure channel") != FT_OK) return 1;
 
-		PN532OverFT232H pn532 { channel, 0x24, 0, 100ms };
+		PN532OverFT232HI2C pn532 { channel, 0x24, 0, 100ms };
 
 		// this is how we would define our response parsing, the very modern way..
 		auto validate = make_target_data_validator(
@@ -120,7 +121,7 @@ int main(int, char**)
 
 			pn532.WriteFrame().Ack();
 		}
-		catch (const runtime_error& e)
+		catch (const exception& e)
 		{
 			cout << "exception caught: " << e.what() << endl;
 		}

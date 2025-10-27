@@ -1,16 +1,16 @@
 #ifndef CF853CBD_A326_4944_A548_06D3FD87669A
 #define CF853CBD_A326_4944_A548_06D3FD87669A
 
-#include "Ft232h.h"
+#include "Ft232hI2c.h"
 #include <PN532Interface.h>
 #include <ControllerFrameWriter.h>
 #include <FrameFormatter.h>
 #include <chrono>
 
-class PN532OverFT232H final : public PN532Interface, private ControllerFrameWriter
+class PN532OverFT232HI2C final : public PN532Interface, private ControllerFrameWriter
 {
 public:
-	PN532OverFT232H(
+	PN532OverFT232HI2C(
 		void* ftHandle,
 		uint8_t i2cAddr,
 		int gpioResetPinIndex,
@@ -21,7 +21,7 @@ public:
 
 	void StartDataTransport() override;
 	ControllerFrameWriter& WriteFrame() override;
-	void ReadFrame(TargetFrameWriter &writer) override;
+	bool ReadFrame(TargetFrameWriter &writer) override;
 
 private:
 
@@ -29,7 +29,7 @@ private:
 	void Nack() override;
 	void DataFromHost(const std::span<uint8_t const>& data) override;
 
-	Ft232h ft232h;
+	Ft232hI2c i2c;
 	FrameFormatter formatter;
 	const std::chrono::milliseconds timeout;
 };

@@ -1,7 +1,9 @@
 #include <Desfire.h>
 #include <PN532OverFT232HSPI.h>
+#include <secrets.h>
 #include <Timer.h>
 #include <libmpsse_spi.h>
+#include <CLI/CLI.hpp>
 #include <cstdint>
 #include <stdexcept>
 #include <iostream>
@@ -43,8 +45,11 @@ template<class T> static void printhex(const T& bytes)
     }
 }
 
-int main(int, char**)
+int main(int argc, char** argv)
 {
+	CLI::App cli{"BAM card programmer"};
+	CLI11_PARSE(cli, argc, argv);
+
 	Init_libMPSSE();
 
 	DWORD numChannels;

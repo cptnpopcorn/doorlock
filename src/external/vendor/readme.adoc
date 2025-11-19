@@ -1,0 +1,61 @@
+= Optional Vendor Libraries Setup
+:toc:
+
+This project optionally depends on two vendor libraries:
+
+- **FTD2XX** (v2.12.36.20)
+- **libMPSSE** (v1.0.8)
+
+Users building components that require these libraries must install them
+locally. The project itself does **not include these libraries**.
+
+You can make CMake find them using `CMAKE_PREFIX_PATH`.
+
+Copy the cmake config files provided here to the respective library locations to make them available for cmake.
+
+== 1. Installing FTD2XX (v2.12.36.20)
+
+1. Build or obtain the library (`ftd2xx.lib` and `ftd2xx.h`).
+
+2. Choose an install prefix, e.g.:
+
+	C:\vendorlibs\ftd2xx-2.12.36.20\
+
+3. Organize files like:
+
+	C:\vendorlibs\ftd2xx-2.12.36.20
+	├── include
+	│	└── ftd2xx.h
+	├── lib
+	│	└── ftd2xx.lib
+	├── FTD2XXConfig.cmake
+	└── FTD2XXConfigVersion.cmake
+
+== 2. Installing libMPSSE (v1.0.8)
+
+1. Build or obtain `libmpsse.lib` and headers (`libmpsse_spi.h`, `libmpsse_i2c.h`).
+
+2. Choose a prefix:
+
+	C:\vendorlibs\mpsse-1.0.8\
+
+3. Organize files:
+
+	C:\vendorlibs\mpsse-1.0.8
+	├── include
+	│	├── libmpsse_spi.h
+	│	└── libmpsse_i2c.h
+	├── lib
+	│	└── libmpsse.lib
+	├── MPSSEConfig.cmake
+	└── MPSSEConfigVersion.cmake
+
+**Note:** libMPSSE depends on FTD2XX. Make sure FTD2XX is available first.
+
+== 3. Using the libraries in CMake
+
+Set your environment variable DCMAKE_PREFIX_PATH to contain the prefixes (the paths to your library folders), separated by semicolon, for example:
+
+```bash
+DCMAKE_PREFIX_PATH="C:/vendorlibs/ftd2xx-2.12.36.20;C:/vendorlibs/mpsse-1.0.8" ..
+```

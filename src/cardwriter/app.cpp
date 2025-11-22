@@ -1,7 +1,6 @@
 #include <Desfire.h>
 #include <PN532OverFT232HSPI.h>
 #include "card_operations.h"
-#include <secrets.h>
 #include <Timer.h>
 #include <libmpsse_spi.h>
 #include <CLI/CLI.hpp>
@@ -14,15 +13,7 @@ using namespace std::chrono;
 
 FT_STATUS log_status(FT_STATUS status, const char *comment)
 {
-    if (status == FT_OK)
-    {
-        cout << comment << " succeeded" << endl;
-    }
-    else
-    {
-        cerr << comment << " failed, error code: " << status << endl;
-    }
-
+    if (status != FT_OK) cerr << comment << " failed, error code: " << status << endl;
     return status;
 }
 

@@ -1,6 +1,7 @@
 #include "card_operations.h"
 #include <Desfire.h>
 #include <Timer.h>
+#include <secrets.h>
 #include <array>
 #include <iomanip>
 #include <span>
@@ -11,8 +12,10 @@ using namespace std;
 using namespace std::chrono;
 
 CardOperations::CardOperations(Desfire &desfire, const milliseconds &timeout) noexcept :
-	desfire{desfire}, timeout{timeout}
+	desfire{desfire}, timeout{timeout}, masterKey{}
 {
+	const auto& piccMaster = secrets::CARD_PICC_MASTER_AES_KEY;
+	masterKey.SetKeyData(piccMaster.data(), piccMaster.size(), 0);
 }
 
 template<class T> static void printhex(const T& bytes, ostream &out)
@@ -56,8 +59,32 @@ void CardOperations::GetInformation(ostream &out)
 		out << "card type: " << format_card_type(cardType) << endl;
 		out << "card UID: "; printhex(span(uid).subspan(0, uid_length), out); out << endl;
 
+		constexpr auto msgNotEV = "this is not a DESFire EV1/2/3 card, cannot be used";
+
+		try
+		{
+			if (!desfire.SelectApplication(0)) throw runtime_error{"cannot select root"};
+		}
+		catch (runtime_error e)
+		{
+			out << "this is not a \"DESFire EV\" card, cannot be used" << endl;
+			return;
+		}
+
+		if (desfire.Authenticate(0, &desfire.DES2_DEFAULT_KEY))
+		{
+			out << "card is configured with default factory key, needs to be initialized yet" << endl;
+			return;
+		}
+
+		if (!desfire.Authenticate(0, &masterKey))
+		{
+			out << "card was already secured by another application, not usable" << endl;
+			return;
+		}
+
 		return;
 	}
 
-	throw runtime_error("no card found");
+	throw runtime_error{"no card found"};
 }

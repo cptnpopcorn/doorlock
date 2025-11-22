@@ -1,5 +1,6 @@
 #include <Desfire.h>
 #include <PN532OverFT232HSPI.h>
+#include "card_operations.h"
 #include <secrets.h>
 #include <Timer.h>
 #include <libmpsse_spi.h>
@@ -48,7 +49,6 @@ template<class T> static void printhex(const T& bytes)
 int main(int argc, char** argv)
 {
 	CLI::App cli{"BAM card programmer"};
-	CLI11_PARSE(cli, argc, argv);
 
 	Init_libMPSSE();
 
@@ -88,7 +88,7 @@ int main(int argc, char** argv)
 		}
 
 		auto cout_flags = cout.flags();
-		cout << "found card reader PN5" << hex << setw(2) << setfill('0') << static_cast<int>(ic) << endl;
+		cout << "found card reader PN532" << hex << setw(2) << setfill('0') << static_cast<int>(ic) << endl;
 		cout.flags(cout_flags);
 
 		if (!cardreader.SetPassiveActivationRetries())
@@ -103,28 +103,14 @@ int main(int argc, char** argv)
 			return 1;
 		}
 
-		cout << "waiting for card to be read";
+		cli.add_subcommand("info", "read card information")->callback([&cardreader]{
+			CardOperations operations {cardreader, 10s};
+			operations.GetInformation(cout);
+		});
 
-		for (Timer t {10s}; t.IsRunning(); t.Update())
-		{
-			array<uint8_t, 8> uid;
-			uint8_t uid_length {0};
-			eCardType cardType {};
+		cli.require_subcommand();
 
-			if (!cardreader.ReadPassiveTargetID(uid.data(), &uid_length, &cardType) || uid_length == 0)
-			{
-				cout << '.';
-				this_thread::sleep_for(500ms);
-				continue;
-			}
-
-			cout << endl;
-
-			cout << "card UID "; printhex(span<uint8_t>{uid}.subspan(0, uid_length)); cout << endl;
-			cout << "card type " << to_underlying(cardType) << endl;
-
-			t = {10s};
-		}
+		CLI11_PARSE(cli, argc, argv);
 	}
 	catch (const exception& err)
 	{

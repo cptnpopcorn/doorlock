@@ -20,7 +20,10 @@ public:
 private:
 	Desfire& desfire;
 	std::chrono::milliseconds timeout;
-	AES masterKey;
+	AES piccMasterKey;
+	AES doorlockMasterKey;
+	AES doorlockWriteKey;
+	AES doorlockReadKey;
 };
 
 #endif /* A11F1F2B_A461_487F_BE2B_2B247D0B271F */

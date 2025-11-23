@@ -7,10 +7,20 @@ enum class KeyNumberPicc : uint8_t {
 	Master = 0x00,
 };
 
+enum class KeyVersionPicc : uint8_t {
+	Master = 0x00,
+};
+
 enum class KeyNumberDoorlock : uint8_t {
 	Master = 0x00,
 	Write = 0x01,
 	Read = 0x02,
+};
+
+enum class KeyVersionDoorlock : uint8_t {
+	Master = 0x00,
+	Write = 0x00,
+	Read = 0x00,
 };
 
 enum class ApplicationId : uint32_t {

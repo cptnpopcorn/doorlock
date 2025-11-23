@@ -3,6 +3,7 @@
 #include <Timer.h>
 #include <card_layout.h>
 #include <secrets.h>
+#include <algorithm>
 #include <array>
 #include <iomanip>
 #include <span>
@@ -12,11 +13,18 @@
 using namespace std;
 using namespace std::chrono;
 
-CardOperations::CardOperations(Desfire &desfire, const milliseconds &timeout) noexcept :
-	desfire{desfire}, timeout{timeout}, masterKey{}
+static inline void set_key(AES& aes, const array<uint8_t, 16>& key, uint8_t version)
 {
-	const auto& piccMaster = secrets::CARD_PICC_MASTER_AES_KEY;
-	masterKey.SetKeyData(piccMaster.data(), piccMaster.size(), 0);
+	aes.SetKeyData(key.data(), key.size(), version);
+}
+
+CardOperations::CardOperations(Desfire &desfire, const milliseconds &timeout) noexcept :
+	desfire{desfire}, timeout{timeout}, piccMasterKey{}
+{
+	set_key(piccMasterKey, secrets::CARD_PICC_MASTER_AES_KEY, to_underlying(KeyVersionPicc::Master));
+	set_key(doorlockMasterKey, secrets::CARD_DOORLOCK_MASTER_AES_KEY, to_underlying(KeyVersionDoorlock::Master));
+	set_key(doorlockWriteKey, secrets::CARD_DOORLOCK_WRITE_AES_KEY, to_underlying(KeyVersionDoorlock::Write));
+	set_key(doorlockReadKey, secrets::CARD_DOORLOCK_READ_AES_KEY, to_underlying(KeyNumberDoorlock::Read));
 }
 
 template<class T> static void printhex(const T& bytes, ostream &out)
@@ -70,19 +78,32 @@ void CardOperations::GetInformation(ostream &out)
 
 		if (desfire.Authenticate(to_underlying(KeyNumberPicc::Master), &desfire.DES2_DEFAULT_KEY))
 		{
-			out << "card is configured with default factory key, needs to be initialized yet" << endl;
+			out << "card is configured with default factory key, needs to be initialized first" << endl;
 			return;
 		}
 
-		if (!desfire.Authenticate(to_underlying(KeyNumberPicc::Master), &masterKey))
+		if (!desfire.Authenticate(to_underlying(KeyNumberPicc::Master), &piccMasterKey))
 		{
 			out << "card was already secured by another application, not usable" << endl;
 			return;
 		}
 
-		out << "this card has been configured for doorlock" << endl;
+		if (!desfire.SelectApplication(to_underlying(ApplicationId::Doorlock)))
+		{
+			out << "no doorlock application data present / no user ID written" << endl;
+			return;
+		}
 
-		// TODO: show user ID, if present
+		out << "doorlock application found" << endl;
+
+		if (!desfire.Authenticate(to_underlying(KeyNumberDoorlock::Read), &doorlockReadKey))
+		{
+			out << "could not access doorlock data for reading, security key not matching" << endl;
+			return;
+		}
+
+		out << "doorlock application authenticated for reading" << endl;
+
 		return;
 	}
 
@@ -110,7 +131,7 @@ void CardOperations::WriteUserId(const std::span<const uint8_t> &id, std::ostrea
 			return;
 		}
 
-		if (!desfire.Authenticate(to_underlying(KeyNumberPicc::Master), &masterKey))
+		if (!desfire.Authenticate(to_underlying(KeyNumberPicc::Master), &piccMasterKey))
 		{
 			out << "card is not configured for doorlock yet, installing PICC master key" << endl; 
 
@@ -120,13 +141,13 @@ void CardOperations::WriteUserId(const std::span<const uint8_t> &id, std::ostrea
 				return;
 			}
 
-			if (!desfire.ChangeKey(to_underlying(KeyNumberPicc::Master), &masterKey, nullptr))
+			if (!desfire.ChangeKey(to_underlying(KeyNumberPicc::Master), &piccMasterKey, nullptr))
 			{
 				out << "failed to install PICC master key" << endl;
 				return;
 			}
 
-			if (!desfire.Authenticate(to_underlying(KeyNumberPicc::Master), &masterKey))
+			if (!desfire.Authenticate(to_underlying(KeyNumberPicc::Master), &piccMasterKey))
 			{
 				out << "failed to re-authenticate after installing PICC master key" << endl;
 				return;
@@ -134,8 +155,45 @@ void CardOperations::WriteUserId(const std::span<const uint8_t> &id, std::ostrea
 		}
 
 		out << "card is configured for doorlock" << endl;
-		return;
-		// TODO: find / add application, create / change user id file
+
+		if (!desfire.SelectApplication(to_underlying(ApplicationId::Doorlock)))
+		{
+			out << "doorlock application not created yet, adding.." << endl;
+
+			if (!desfire.CreateApplication(
+				to_underlying(ApplicationId::Doorlock),
+				KS_CHANGE_KEY_WITH_MK,
+				3,
+				DESFireKeyType::DF_KEY_AES))
+			{
+				out << "error adding doorlock application to card" << endl;
+				return;
+			}
+
+			if (!desfire.SelectApplication(to_underlying(ApplicationId::Doorlock)))
+			{
+				out << "error using freshly added doorlock application data" << endl;
+				return;
+			}
+		}
+
+		out << "found doorlock application data" << endl;
+
+		if (!desfire.Authenticate(to_underlying(KeyNumberDoorlock::Master), &doorlockMasterKey))
+		{
+			out << "doorlock application key not set, configuring keys" << endl;
+
+			if (!desfire.Authenticate(to_underlying(KeyNumberDoorlock::Master), &desfire.AES_DEFAULT_KEY))
+			{
+				out << "doorlock application data was created with another security key, cannot access" << endl;
+				return;
+			}
+
+			out << "doorlock data still using default master key" << endl;
+			return;
+		}
+
+		out << "should not have gotten here" << endl;
 	}
 
 	throw runtime_error{"no card found"};

@@ -127,7 +127,7 @@ struct DESFireCardVersion
 };
 
 // MK = Application Master Key or PICC Master Key
-enum DESFireKeySettings
+enum DESFireKeySettings : uint8_t
 {
     // ------------ BITS 0-3 ---------------
     KS_ALLOW_CHANGE_MK                = 0x01, // If this bit is set, the MK can be changed, otherwise it is frozen.

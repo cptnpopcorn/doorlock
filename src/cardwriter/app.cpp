@@ -101,6 +101,8 @@ int main(int argc, char** argv)
 		auto &add_cmd = *cli.add_subcommand("write", "write user ID");
 		add_cmd.callback([&ops]{ ops.WriteUserId(array<uint8_t, 0>{}, cout); }); // TODO: parse and validate 10 bytes hex string
 
+		cli.add_subcommand("delete", "delete user ID")->callback([&ops]{ ops.DeleteUserId(cout); });
+
 		cli.require_subcommand();
 
 		CLI11_PARSE(cli, argc, argv);

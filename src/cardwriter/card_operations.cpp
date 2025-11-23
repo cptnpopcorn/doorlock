@@ -110,7 +110,7 @@ void CardOperations::GetInformation(ostream &out)
 	throw runtime_error{"no card found"};
 }
 
-void CardOperations::WriteUserId(const std::span<const uint8_t> &id, std::ostream& out)
+void CardOperations::WriteUserId(const span<const uint8_t> &id, ostream& out)
 {
 	for (Timer t {timeout}; t.IsRunning(); t.Update())
 	{
@@ -158,11 +158,11 @@ void CardOperations::WriteUserId(const std::span<const uint8_t> &id, std::ostrea
 
 		if (!desfire.SelectApplication(to_underlying(ApplicationId::Doorlock)))
 		{
-			out << "doorlock application not created yet, adding.." << endl;
+			out << "doorlock application not created yet, creating.." << endl;
 
 			if (!desfire.CreateApplication(
 				to_underlying(ApplicationId::Doorlock),
-				KS_CHANGE_KEY_WITH_MK,
+				static_cast<DESFireKeySettings>(KS_ALLOW_CHANGE_MK | KS_CHANGE_KEY_WITH_MK),
 				3,
 				DESFireKeyType::DF_KEY_AES))
 			{
@@ -181,24 +181,70 @@ void CardOperations::WriteUserId(const std::span<const uint8_t> &id, std::ostrea
 
 		if (!desfire.Authenticate(to_underlying(KeyNumberDoorlock::Master), &doorlockMasterKey))
 		{
-			out << "doorlock application key not set, configuring keys" << endl;
-
 			if (!desfire.Authenticate(to_underlying(KeyNumberDoorlock::Master), &desfire.AES_DEFAULT_KEY))
 			{
 				out << "doorlock application data was created with another security key, cannot access" << endl;
 				return;
 			}
 
-			out << "doorlock data still using default master key" << endl;
-			return;
+			out << "doorlock application key not set, configuring keys" << endl;
+
+			if (!desfire.ChangeKey(to_underlying(KeyNumberDoorlock::Master), &doorlockMasterKey, nullptr))
+			{
+				out << "error setting doorlock application master key" << endl;
+				return;
+			}
+
+			if (!desfire.Authenticate(to_underlying(KeyNumberDoorlock::Master), &doorlockMasterKey))
+			{
+				out << "error re-authenticating with doorlock application master key" << endl;
+				return;
+			}
 		}
 
-		out << "should not have gotten here" << endl;
+		out << "doorlock application authenticated" << endl;
+		return;
 	}
 
 	throw runtime_error{"no card found"};
 }
 
-void CardOperations::DeleteUserId(std::ostream& out)
+void CardOperations::DeleteUserId(ostream& out)
 {
+	for (Timer t {timeout}; t.IsRunning(); t.Update())
+	{
+		array<uint8_t, 8> uid;
+		uint8_t uid_length {0};
+		eCardType cardType {};
+
+		if (!desfire.ReadPassiveTargetID(uid.data(), &uid_length, &cardType) || uid_length == 0)
+		{
+			out << '.';
+			this_thread::sleep_for(500ms);
+			continue;
+		}
+
+		if (!desfire.SelectApplication(to_underlying(ApplicationId::Picc)))
+		{
+			out << "this is not a \"DESFire EV\" card, cannot be used" << endl;
+			return;
+		}
+
+		if (!desfire.Authenticate(to_underlying(KeyNumberPicc::Master), &piccMasterKey))
+		{
+			out << "card was already secured by another application, not usable" << endl;
+			return;
+		}
+
+		if (!desfire.DeleteApplication(to_underlying(ApplicationId::Doorlock)))
+		{
+			out << "no doorlock application data present, nothing to do" << endl;
+			return;
+		}
+
+		out << "doorlock application data deleted" << endl;
+		return;
+	}
+
+	throw runtime_error{"no card found"};
 }

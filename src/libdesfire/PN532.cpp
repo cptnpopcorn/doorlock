@@ -569,13 +569,15 @@ bool PN532::ReadAck() // TODO: if there is something else than ACK or corruption
 {
 	try
 	{
+		auto ack_received = false;
+
 		auto ack_writer = make_frame_writer(
-			[]{ throw runtime_error{"LCS invalid"}; },
-			[]{}, // the ACK we are looking for
-			[]{ throw runtime_error{"NACKed"}; }, // well: it seems for some operations NACK is expected - that should be specified as a parameter
-			[]{ throw runtime_error{"TFI invalid"}; },
-			[] -> TargetDataWriter& { throw runtime_error{"unexpected data"}; },
-			[] -> TargetDataValidator& { throw runtime_error{"unexpected error"}; },
+			[]{},
+			[&ack_received]{ ack_received = true; }, // the ACK we are looking for
+			[]{},
+			[]{},
+			[] -> TargetDataWriter& { return NullTargetDataWriter::Default(); },
+			[] -> TargetDataValidator& { return NullTargetDataValidator::Default(); },
 			[]{});
 
 		interface.ReadFrame(ack_writer);
@@ -595,10 +597,12 @@ bool PN532::ReadAck() // TODO: if there is something else than ACK or corruption
     returns the number of bytes that have been copied to buff (< len) or 0 on error
 **************************************************************************/
 uint8_t PN532::ReadData(uint8_t* buff, uint8_t len) 
-{	
+{
+	auto is_valid = false;
+
 	auto validate = make_target_data_validator(
-		[]{},
-		[]{ throw runtime_error{"DCS invalid"}; });
+		[&is_valid]{ is_valid = true; },
+		[]{});
 
 	size_t write_pos {0};
 
@@ -613,15 +617,16 @@ uint8_t PN532::ReadData(uint8_t* buff, uint8_t len)
 		[&validate] -> auto&& { return validate; });
 
 	auto frame_writer = make_frame_writer(
-		[]{ throw runtime_error{"LCS invalid"}; },
-		[]{}, // the ACK we are looking for
-		[]{ throw runtime_error{"NACKed"}; },
-		[]{ throw runtime_error{"TFI invalid"}; },
+		[]{},
+		[]{},
+		[]{},
+		[]{},
 		[&write_data] -> auto& { return write_data; },
-		[] -> TargetDataValidator& { throw runtime_error{"unexpected error"}; },
-		[]{ throw runtime_error{"frame incomplete"}; });
+		[] -> TargetDataValidator& { return NullTargetDataValidator::Default(); },
+		[]{});
 
 	if (!interface.ReadFrame(frame_writer)) return 0;
+	if (!is_valid) return 0;
 
 	this_thread::sleep_for(2ms);
 

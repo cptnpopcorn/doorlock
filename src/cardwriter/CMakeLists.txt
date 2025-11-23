@@ -9,4 +9,4 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(cli11_proj)
 
 add_executable(cardwriter EXCLUDE_FROM_ALL app.cpp card_operations.cpp)
-target_link_libraries(cardwriter PRIVATE pn532-ft232h CLI11::CLI11 card_secrets libdesfire)
+target_link_libraries(cardwriter PRIVATE pn532-ft232h CLI11::CLI11 card_secrets card_layout libdesfire)

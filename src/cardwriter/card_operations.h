@@ -4,6 +4,7 @@
 #include <AES128.h>
 #include <chrono>
 #include <ostream>
+#include <span>
 
 class Desfire;
 
@@ -13,6 +14,8 @@ public:
 	CardOperations(Desfire& desfire, const std::chrono::milliseconds& timeout) noexcept;
 
 	void GetInformation(std::ostream& out);
+	void WriteUserId(const std::span<const uint8_t>& id, std::ostream& out);
+	void DeleteUserId(std::ostream& out);
 
 private:
 	Desfire& desfire;

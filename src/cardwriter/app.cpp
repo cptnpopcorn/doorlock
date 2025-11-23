@@ -94,10 +94,12 @@ int main(int argc, char** argv)
 			return 1;
 		}
 
-		cli.add_subcommand("info", "read card information")->callback([&cardreader]{
-			CardOperations operations {cardreader, 10s};
-			operations.GetInformation(cout);
-		});
+		CardOperations ops {cardreader, 10s};
+
+		cli.add_subcommand("info", "read card information")->callback([&ops]{ ops.GetInformation(cout); });
+
+		auto &add_cmd = *cli.add_subcommand("write", "write user ID");
+		add_cmd.callback([&ops]{ ops.WriteUserId(array<uint8_t, 0>{}, cout); }); // TODO: parse and validate 10 bytes hex string
 
 		cli.require_subcommand();
 

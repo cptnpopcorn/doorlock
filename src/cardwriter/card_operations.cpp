@@ -1,6 +1,7 @@
 #include "card_operations.h"
 #include <Desfire.h>
 #include <Timer.h>
+#include <card_layout.h>
 #include <secrets.h>
 #include <array>
 #include <iomanip>
@@ -61,30 +62,85 @@ void CardOperations::GetInformation(ostream &out)
 
 		constexpr auto msgNotEV = "this is not a DESFire EV1/2/3 card, cannot be used";
 
-		try
-		{
-			if (!desfire.SelectApplication(0)) throw runtime_error{"cannot select root"};
-		}
-		catch (runtime_error e)
+		if (!desfire.SelectApplication(to_underlying(ApplicationId::Picc)))
 		{
 			out << "this is not a \"DESFire EV\" card, cannot be used" << endl;
 			return;
 		}
 
-		if (desfire.Authenticate(0, &desfire.DES2_DEFAULT_KEY))
+		if (desfire.Authenticate(to_underlying(KeyNumberPicc::Master), &desfire.DES2_DEFAULT_KEY))
 		{
 			out << "card is configured with default factory key, needs to be initialized yet" << endl;
 			return;
 		}
 
-		if (!desfire.Authenticate(0, &masterKey))
+		if (!desfire.Authenticate(to_underlying(KeyNumberPicc::Master), &masterKey))
 		{
 			out << "card was already secured by another application, not usable" << endl;
 			return;
 		}
 
+		out << "this card has been configured for doorlock" << endl;
+
+		// TODO: show user ID, if present
 		return;
 	}
 
 	throw runtime_error{"no card found"};
+}
+
+void CardOperations::WriteUserId(const std::span<const uint8_t> &id, std::ostream& out)
+{
+	for (Timer t {timeout}; t.IsRunning(); t.Update())
+	{
+		array<uint8_t, 8> uid;
+		uint8_t uid_length {0};
+		eCardType cardType {};
+
+		if (!desfire.ReadPassiveTargetID(uid.data(), &uid_length, &cardType) || uid_length == 0)
+		{
+			out << '.';
+			this_thread::sleep_for(500ms);
+			continue;
+		}
+
+		if (!desfire.SelectApplication(to_underlying(ApplicationId::Picc)))
+		{
+			out << "this is not a \"DESFire EV\" card, cannot be used" << endl;
+			return;
+		}
+
+		if (!desfire.Authenticate(to_underlying(KeyNumberPicc::Master), &masterKey))
+		{
+			out << "card is not configured for doorlock yet, installing PICC master key" << endl; 
+
+			if (!desfire.Authenticate(to_underlying(KeyNumberPicc::Master), &desfire.DES2_DEFAULT_KEY))
+			{
+				out << "card was already secured by another application, not usable" << endl;
+				return;
+			}
+
+			if (!desfire.ChangeKey(to_underlying(KeyNumberPicc::Master), &masterKey, nullptr))
+			{
+				out << "failed to install PICC master key" << endl;
+				return;
+			}
+
+			if (!desfire.Authenticate(to_underlying(KeyNumberPicc::Master), &masterKey))
+			{
+				out << "failed to re-authenticate after installing PICC master key" << endl;
+				return;
+			}
+		}
+
+		out << "card is configured for doorlock" << endl;
+		return;
+		// TODO: find / add application, create / change user id file
+	}
+
+	throw runtime_error{"no card found"};
+}
+
+void CardOperations::DeleteUserId(std::ostream& out)
+{
 }

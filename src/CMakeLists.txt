@@ -25,12 +25,6 @@ configure_file(
     @ONLY
 )
 
-configure_file(
-    ${CMAKE_CURRENT_LIST_DIR}/config/secrets.h.in
-    ${GENERATED_DIR}/secrets.h
-    @ONLY
-)
-
 set(SECRET_FILE "${CMAKE_CURRENT_LIST_DIR}/config/secrets.cmake")
 
 if(NOT EXISTS "${SECRET_FILE}")
@@ -42,6 +36,9 @@ endif()
 
 add_library(card_secrets INTERFACE)
 target_include_directories(card_secrets INTERFACE ${GENERATED_DIR})
+
+add_library(card_layout INTERFACE)
+target_include_directories(card_layout INTERFACE ${CMAKE_CURRENT_LIST_DIR}/config)
 
 add_subdirectory(libdesfire)
 add_subdirectory(libdesfire_tests)

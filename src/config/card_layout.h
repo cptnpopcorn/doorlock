@@ -28,4 +28,12 @@ enum class ApplicationId : uint32_t {
 	Doorlock = 0x4B434C44, // "DLCK"
 };
 
+enum class FileId : uint8_t {
+	PublicUserId = 0x01,
+};
+
+enum class FileSize : int {
+	PublicuserId = 10,
+};
+
 #endif /* F59D66CF_C2F4_415E_8FED_DAA916BC1713 */

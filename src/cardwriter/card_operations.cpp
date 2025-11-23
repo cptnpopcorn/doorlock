@@ -102,8 +102,14 @@ void CardOperations::GetInformation(ostream &out)
 			return;
 		}
 
-		out << "doorlock application authenticated for reading" << endl;
+		array<uint8_t, static_cast<size_t>(FileSize::PublicuserId)> user_id;
+		if (!desfire.ReadFileData(to_underlying(FileId::PublicUserId), 0, user_id.size(), user_id.data()))
+		{
+			out << "could not read doorlock user ID file" << endl;
+			return;
+		}
 
+		out << "user ID = "; printhex(user_id, out); out << endl;
 		return;
 	}
 
@@ -189,7 +195,7 @@ void CardOperations::WriteUserId(const span<const uint8_t> &id, ostream& out)
 
 			out << "doorlock application key not set, configuring keys" << endl;
 
-			if (!desfire.ChangeKey(to_underlying(KeyNumberDoorlock::Master), &doorlockMasterKey, nullptr))
+			if (!desfire.ChangeKey(to_underlying(KeyNumberDoorlock::Master), &doorlockMasterKey, &desfire.AES_DEFAULT_KEY))
 			{
 				out << "error setting doorlock application master key" << endl;
 				return;
@@ -200,9 +206,51 @@ void CardOperations::WriteUserId(const span<const uint8_t> &id, ostream& out)
 				out << "error re-authenticating with doorlock application master key" << endl;
 				return;
 			}
+
+			if (!desfire.ChangeKey(to_underlying(KeyNumberDoorlock::Write), &doorlockWriteKey, &desfire.AES_DEFAULT_KEY))
+			{
+				out << "error setting doorlock application write key" << endl;
+				return;
+			}
+
+			if (!desfire.ChangeKey(to_underlying(KeyNumberDoorlock::Read), &doorlockReadKey, &desfire.AES_DEFAULT_KEY))
+			{
+				out << "error setting doorlock application read key" << endl;
+				return;
+			}
 		}
 
-		out << "doorlock application authenticated" << endl;
+		DESFireFileSettings id_file_settings {};
+		if (!desfire.GetFileSettings(to_underlying(FileId::PublicUserId), &id_file_settings))
+		{
+			out << "user ID file not existing, creating.." << endl;
+
+			DESFireFilePermissions permissions {
+				.e_ReadAccess = static_cast<DESFireAccessRights>(KeyNumberDoorlock::Read),
+				.e_WriteAccess = static_cast<DESFireAccessRights>(KeyNumberDoorlock::Write),
+				.e_ReadAndWriteAccess = static_cast<DESFireAccessRights>(KeyNumberDoorlock::Write),
+				.e_ChangeAccess = static_cast<DESFireAccessRights>(KeyNumberDoorlock::Master),
+			};
+
+			if (!desfire.Authenticate(to_underlying(KeyNumberDoorlock::Master), &doorlockMasterKey))
+			{
+				out << "error re-authenticating with doorlock application master key" << endl;
+				return;
+			}
+
+			if (!desfire.CreateStdDataFile(
+				to_underlying(FileId::PublicUserId),
+				&permissions,
+				static_cast<int>(FileSize::PublicuserId)))
+			{
+				out << "error creating doorlock user ID file" << endl;
+				return;
+			}
+
+			out << "user ID file present" << endl;
+			return;
+		}
+
 		return;
 	}
 

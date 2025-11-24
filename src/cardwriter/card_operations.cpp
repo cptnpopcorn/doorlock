@@ -246,11 +246,25 @@ void CardOperations::WriteUserId(const span<const uint8_t> &id, ostream& out)
 				out << "error creating doorlock user ID file" << endl;
 				return;
 			}
+		}
 
-			out << "user ID file present" << endl;
+		if (!desfire.Authenticate(to_underlying(KeyNumberDoorlock::Write), &doorlockWriteKey))
+		{
+			out << "error re-authenticating with doorlock application write key" << endl;
 			return;
 		}
 
+		if (!desfire.WriteFileData(
+			to_underlying(FileId::PublicUserId),
+			0,
+			min(static_cast<int>(id.size()), static_cast<int>(FileSize::PublicuserId)),
+			id.data()))
+		{
+			out << "error writing user ID to card" << endl;
+			return;
+		}
+
+		out << "wrote use ID "; printhex(id, out); out << endl;
 		return;
 	}
 

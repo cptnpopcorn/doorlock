@@ -5,8 +5,10 @@
 #include <libmpsse_spi.h>
 #include <CLI/CLI.hpp>
 #include <cstdint>
+#include <cctype>
 #include <stdexcept>
 #include <iostream>
+#include <string>
 
 using namespace std;
 using namespace std::chrono;
@@ -99,9 +101,41 @@ int main(int argc, char** argv)
 		cli.add_subcommand("info", "read card information")->callback([&ops]{ ops.GetInformation(cout); });
 
 		auto &add_cmd = *cli.add_subcommand("write", "write user ID");
-		add_cmd.callback([&ops]{ ops.WriteUserId(array<uint8_t, 0>{}, cout); }); // TODO: parse and validate 10 bytes hex string
 
-		cli.add_subcommand("delete", "delete user ID")->callback([&ops]{ ops.DeleteUserId(cout); });
+		string user_id_formatted {};
+
+		auto user_id_option = add_cmd.add_option(
+			"-u,--userid",
+			user_id_formatted,
+			"define user ID to write (10 bytes random number as 20 hex digits)");
+
+		user_id_option->mandatory();
+		user_id_option->check([](const auto option){
+			if (ranges::count_if(option, [](const auto &c){ return isxdigit(c); }) != 20) return "expecting 20 hex digits for user ID";
+			return ""; });
+		
+		add_cmd.callback([&ops, &user_id_formatted]{
+			array<uint8_t, 10> user_id {};
+			auto bit = 4;
+			auto octet = user_id.begin();
+			for (const auto& c : user_id_formatted)
+			{
+				if (octet == user_id.cend()) break;
+
+				const auto nibble = c - (c >= 'a' ? 'a' - 10 : c >= 'A' ? 'A' - 10 : '0');
+				if (nibble < 0 || nibble > 0xF) continue;
+				
+				*octet |= nibble << bit;
+
+				const auto next_bit = bit - 4;
+				octet += (next_bit >> 3) & 1;
+				bit = next_bit & 7;
+			}
+
+			ops.WriteUserId(user_id, cout);
+		});
+
+		cli.add_subcommand("delete", "delete user ID")->callback([&ops, &user_id_option]{ ops.DeleteUserId(cout); });
 
 		cli.require_subcommand();
 

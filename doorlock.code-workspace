@@ -2,6 +2,9 @@
 	"folders": [
 		{
 			"path": "common"
+		},
+		{
+			"path": "esp32-cardreader"
 		}
 	],
 	"settings": {

@@ -1,3 +1,6 @@
+cmake_minimum_required(VERSION 3.31)
+project(doorlock)
+
 set(GENERATED_DIR "${CMAKE_BINARY_DIR}/generated")
 file(MAKE_DIRECTORY "${GENERATED_DIR}")
 

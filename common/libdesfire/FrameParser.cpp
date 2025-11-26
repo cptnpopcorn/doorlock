@@ -112,7 +112,7 @@ size_t FrameParser::ParseLength(const std::span<uint8_t const> &data)
 	const auto& len = get<0>(seq);
 	const auto& lcs = get<1>(seq);
 
-	if (len + lcs & 0xFF != 0x00) // len + lcs corrupted
+	if ((len + lcs) & 0xFF != 0x00) // len + lcs corrupted
 	{
 		writer.LcsInvalid();
 		Done();

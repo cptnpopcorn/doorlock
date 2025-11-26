@@ -6,6 +6,7 @@
 **************************************************************************/
 
 #include "Utils.h"
+#include <cstring>
 #include <iostream>
 #include <string>
 

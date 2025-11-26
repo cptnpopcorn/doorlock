@@ -53,6 +53,7 @@
 #include "NullTargetDataValidator.h"
 
 #include <algorithm>
+#include <cstring>
 #include <span>
 
 using namespace std;

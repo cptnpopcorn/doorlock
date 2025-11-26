@@ -15,6 +15,8 @@
 
 #include "Utils.h"
 
+#include <cstring>
+
 // These macros create a new buffer on the stack avoiding the use of the 'new' operator.
 // ATTENTION: 
 // These macros will not work if you define the TxBuffer/RxBuffer as member of a class (see mi_CmacBuffer). 

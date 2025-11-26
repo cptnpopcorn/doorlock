@@ -2,6 +2,7 @@
 #define D84B0AA2_D978_4AF6_8CC7_65D102B7FCED
 
 #include <array>
+#include <cstdint>
 #include <span>
 
 class FrameFormatter final

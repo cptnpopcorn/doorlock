@@ -1,7 +1,4 @@
-#include <driver/spi_master.h>
-
-#include <DES.h>
-
+#include <Pn532BeetleEsp32C6Spi.h>
 #include <iostream>
 
 using namespace std;

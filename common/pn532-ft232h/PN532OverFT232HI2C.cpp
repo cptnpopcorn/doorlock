@@ -81,16 +81,16 @@ void PN532OverFT232HI2C::DataFromHost(const std::span<uint8_t const> &data)
 	}
 }
 
-class chip_deselect_guard final
+class chip_select_guard final
 {
 public:
-	chip_deselect_guard(Ft232hI2c &i2c) noexcept : i2c{i2c} {}
-	chip_deselect_guard(const chip_deselect_guard&) = delete;
-	chip_deselect_guard(chip_deselect_guard&&) = delete;
-	chip_deselect_guard& operator =(const chip_deselect_guard&) = delete;
-	chip_deselect_guard& operator =(chip_deselect_guard&&) = delete;
+	chip_select_guard(Ft232hI2c &i2c) noexcept : i2c{i2c} {}
+	chip_select_guard(const chip_select_guard&) = delete;
+	chip_select_guard(chip_select_guard&&) = delete;
+	chip_select_guard& operator =(const chip_select_guard&) = delete;
+	chip_select_guard& operator =(chip_select_guard&&) = delete;
 
-	~chip_deselect_guard()
+	~chip_select_guard()
 	{
 		uint8_t dummy {};
 		i2c.Read(span{&dummy, 1}, I2C_TRANSFER_OPTIONS_NO_ADDRESS | I2C_TRANSFER_OPTIONS_STOP_BIT);
@@ -114,7 +114,7 @@ bool PN532OverFT232HI2C::ReadFrame(TargetFrameWriter &writer)
 		this_thread::sleep_for(5ms);
 	}	
 
-	chip_deselect_guard stop_read(i2c);
+	chip_select_guard stop_read(i2c);
 	if (!t.IsRunning()) return false;
 
 	this_thread::sleep_for(2ms);

@@ -50,18 +50,18 @@ void PN532OverFT232HSPI::Nack()
 	spi.Write(formatter.GetNack(), false, true);
 }
 
-class chip_deselect_guard final
+class chip_select_guard final
 {
 public:
-	chip_deselect_guard(Ft232hSpi &spi) noexcept : spi{spi} {}
-	chip_deselect_guard(const chip_deselect_guard&) = delete;
-	chip_deselect_guard(chip_deselect_guard&&) = delete;
-	chip_deselect_guard& operator =(const chip_deselect_guard&) = delete;
-	chip_deselect_guard& operator =(chip_deselect_guard&&) = delete;
+	chip_select_guard(Ft232hSpi &spi) noexcept : spi{spi} {}
+	chip_select_guard(const chip_select_guard&) = delete;
+	chip_select_guard(chip_select_guard&&) = delete;
+	chip_select_guard& operator =(const chip_select_guard&) = delete;
+	chip_select_guard& operator =(chip_select_guard&&) = delete;
 
 	void disarm() { is_disarmed = true; }
 
-	~chip_deselect_guard()
+	~chip_select_guard()
 	{
 		if (!is_disarmed) spi.DeassertChipSelect();
 	}
@@ -80,7 +80,7 @@ void PN532OverFT232HSPI::DataFromHost(const std::span<uint8_t const> &data)
 	const auto header_written = spi.Write(header, false, false);
 	if (header_written != header.size()) throw runtime_error {"data header write error"};
 
-	chip_deselect_guard deselect {spi};
+	chip_select_guard deselect {spi};
 
 	const auto data_written = spi.Write(data, false, false);
 	if (data_written != data.size()) throw runtime_error {"payload write error"};
@@ -112,7 +112,7 @@ bool PN532OverFT232HSPI::ReadFrame(TargetFrameWriter &writer)
 	const array<uint8_t, 1> dw {0b11};
 	if (spi.Write(dw, true, false) != dw.size()) throw runtime_error {"DW write error"};
 
-	chip_deselect_guard deselect {spi};
+	chip_select_guard deselect {spi};
 	array<uint8_t, 128> buffer;
 	span<uint8_t> bufferSpan {buffer};
 	FrameParser parser {writer};

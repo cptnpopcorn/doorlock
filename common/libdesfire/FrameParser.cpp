@@ -113,7 +113,7 @@ size_t FrameParser::ParseLength(const std::span<uint8_t const> &data)
 	const auto& len = get<0>(seq);
 	const auto& lcs = get<1>(seq);
 
-	if ((len + lcs) & 0xFF != 0x00) // len + lcs corrupted
+	if (((len + lcs) & 0xFF) != 0x00) // len + lcs corrupted
 	{
 		writer.LcsInvalid();
 		Done();
@@ -155,7 +155,7 @@ size_t FrameParser::ParseExtendedLength(const std::span<uint8_t const> &data)
 	const auto& lcs = *it++;
 	const auto consumed = it - data.cbegin();
 
-	if ((lenM + lenL + lcs & 0xFF) != 0x00) // len + lcs corrupted
+	if (((lenM + lenL + lcs) & 0xFF) != 0x00) // len + lcs corrupted
 	{
 		writer.LcsInvalid();
 		Done();
@@ -263,7 +263,7 @@ size_t FrameParser::ParseDcs(const std::span<uint8_t const> &data)
 	const auto consumed = it - data.cbegin();
 	const auto left = data.cend() - it;
 
-	if ((dataSum + dcs & 0xFF) == 0x00)
+	if (((dataSum + dcs) & 0xFF) == 0x00)
 	{
 		dataValidator->DcsValid();
 	}

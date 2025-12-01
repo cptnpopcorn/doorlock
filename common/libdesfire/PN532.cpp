@@ -583,7 +583,7 @@ bool PN532::ReadAck() // TODO: if there is something else than ACK or corruption
 
 		interface.ReadFrame(ack_writer);
 	}
-	catch (exception e)
+	catch (const exception&)
 	{
 		return false;
 	}

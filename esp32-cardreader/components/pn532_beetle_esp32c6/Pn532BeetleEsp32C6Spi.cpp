@@ -3,6 +3,7 @@
 #include <driver/spi_master.h>
 #include <FrameParser.h>
 #include <Timer.h>
+#include <algorithm>
 #include <array>
 #include <cstdint>
 #include <stdexcept>
@@ -14,11 +15,11 @@ using namespace std::chrono;
 
 namespace Pins
 {
-	constexpr gpio_num_t Mosi = GPIO_NUM_22;
-	constexpr gpio_num_t Miso = GPIO_NUM_21;
-	constexpr gpio_num_t Sck = GPIO_NUM_23;
 	constexpr gpio_num_t Cs = GPIO_NUM_16;
 	constexpr gpio_num_t Rstpd = GPIO_NUM_17;
+	constexpr gpio_num_t Miso = GPIO_NUM_21;
+	constexpr gpio_num_t Mosi = GPIO_NUM_22;
+	constexpr gpio_num_t Sck = GPIO_NUM_23;
 };
 
 Pn532BeetleEsp32C6Spi::Pn532BeetleEsp32C6Spi(const chrono::milliseconds &timeout) :
@@ -55,6 +56,7 @@ Pn532BeetleEsp32C6Spi::Pn532BeetleEsp32C6Spi(const chrono::milliseconds &timeout
 	spi_bus_config.quadwp_io_num = -1;
 	spi_bus_config.quadhd_io_num = -1;
 
+	// DMA mode does not work for sending data from flash memory, and we have a couple of const octets we will send here and there
 	if (spi_bus_initialize(SPI2_HOST, &spi_bus_config, SPI_DMA_CH_AUTO) != ESP_OK) throw runtime_error{"error configuring SPI"};
 
 	spi_device_interface_config_t spi_dev_config {};
@@ -62,6 +64,7 @@ Pn532BeetleEsp32C6Spi::Pn532BeetleEsp32C6Spi(const chrono::milliseconds &timeout
 	spi_dev_config.clock_speed_hz = 100'000;
 	spi_dev_config.spics_io_num = -1; // we will handle the chip select outselves, due to PN532 requirements for read / write and its latency
 	spi_dev_config.queue_size = 4;
+	spi_dev_config.flags = SPI_DEVICE_HALFDUPLEX;
 
 	if (spi_bus_add_device(SPI2_HOST, &spi_dev_config, &handle) != ESP_OK) throw runtime_error{"could not add SPI device"};
 }
@@ -183,24 +186,56 @@ void Pn532BeetleEsp32C6Spi::DeassertChipSelect()
 	gpio_set_level(Pins::Cs, 1);
 }
 
+// SPI lib will use GDMA and not reorder bits, so we need to do it ourselves (BUG in ESP-IDF for ESP32-C6)
+
+constexpr uint8_t reflect_bits(const uint8_t& b)
+{
+	const auto b1 = ((b << 1) & 0b10101010) | ((b >> 1) & 0b01010101);
+	const auto b2 = ((b1 << 2) & 0b11001100) | ((b1 >> 2) & 0b00110011);
+	return ((b2 << 4) & 0b11110000) | (b2 >> 4);
+}
+
+void reflect_bits(const span<const uint8_t> &src, const span<uint8_t> &dst)
+{
+	ranges::transform(src, dst.begin(), [](auto bits) { return reflect_bits(bits); });
+}
+
 void Pn532BeetleEsp32C6Spi::Write(const std::span<const uint8_t> &data)
 {
-	spi_transaction_t description {};
-	description.length = data.size() * 8;
-	description.tx_buffer = data.data();
-	description.rx_buffer = nullptr;
+	auto to_convert = data;
+	array<uint8_t, 32> buffer;
 
-	if (!spi_device_transmit(handle, &description)) throw runtime_error{"SPI write error"};
+	while (!to_convert.empty())
+	{
+		const auto slice = to_convert.subspan(0, min(to_convert.size(), buffer.size()));
+		reflect_bits(slice, buffer);
+		to_convert = to_convert.subspan(slice.size());
+
+		spi_transaction_t description {};
+		description.length = slice.size() * 8;
+		description.tx_buffer = buffer.data();
+
+		if (spi_device_transmit(handle, &description) != ESP_OK) throw runtime_error{"SPI write error"};
+	}
 }
 
 void Pn532BeetleEsp32C6Spi::Read(const std::span<uint8_t> &data)
 {
-	spi_transaction_t description {};
-	description.length = data.size() * 8;
-	description.tx_buffer = nullptr;
-	description.rx_buffer = data.data();
+	auto to_convert = data;
+	array<uint8_t, 32> buffer;
 
-	if (!spi_device_transmit(handle, &description)) throw runtime_error{"SPI read error"};
+	while (!to_convert.empty())
+	{
+		const span<uint8_t> slice{buffer.begin(), min(to_convert.size(), buffer.size())};
+		spi_transaction_t description {};
+		description.rxlength = slice.size() * 8;
+		description.rx_buffer = slice.data();
+
+		if (spi_device_transmit(handle, &description) != ESP_OK) throw runtime_error{"SPI read error"};
+
+		reflect_bits(slice, to_convert);
+		to_convert = to_convert.subspan(0, slice.size());
+	}
 }
 
 Pn532BeetleEsp32C6Spi::~Pn532BeetleEsp32C6Spi()

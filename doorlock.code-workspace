@@ -90,7 +90,8 @@
 			"random": "cpp",
 			"string_view": "cpp",
 			"mutex": "cpp",
-			"text_encoding": "cpp"
+			"text_encoding": "cpp",
+			"cassert": "c"
 		}
 	}
 }

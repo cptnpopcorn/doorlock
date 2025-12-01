@@ -568,27 +568,19 @@ void PN532::WriteCommand(uint8_t* cmd, uint8_t cmdlen)
 **************************************************************************/
 bool PN532::ReadAck() // TODO: if there is something else than ACK or corruption, we should just abandon everything
 {
-	try
-	{
-		auto ack_received = false;
+	auto ack_received = false;
 
-		auto ack_writer = make_frame_writer(
-			[]{},
-			[&ack_received]{ ack_received = true; }, // the ACK we are looking for
-			[]{},
-			[]{},
-			[] -> TargetDataWriter& { return NullTargetDataWriter::Default(); },
-			[] -> TargetDataValidator& { return NullTargetDataValidator::Default(); },
-			[]{});
+	auto ack_writer = make_frame_writer(
+		[]{},
+		[&ack_received]{ ack_received = true; }, // the ACK we are looking for
+		[]{},
+		[]{},
+		[] -> TargetDataWriter& { return NullTargetDataWriter::Default(); },
+		[] -> TargetDataValidator& { return NullTargetDataValidator::Default(); },
+		[]{});
 
-		interface.ReadFrame(ack_writer);
-	}
-	catch (const exception&)
-	{
-		return false;
-	}
-
-	return true;
+	interface.ReadFrame(ack_writer);
+	return ack_received;
 }
 
 /**************************************************************************

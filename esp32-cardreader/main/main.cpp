@@ -19,8 +19,9 @@ extern "C" void app_main(void)
 		Desfire des{pn_spi};
 		des.begin();
 
-		cout << "waiting for 10 s" << endl;
-		this_thread::sleep_for(10s);
+		cout << "waiting for 5 s" << endl;
+		this_thread::sleep_for(5s);
+		cout << "go" << endl;
 
 		try
 		{
@@ -30,9 +31,9 @@ extern "C" void app_main(void)
 			uint8_t flags;
 			if (des.GetFirmwareVersion(&icType, &versionHi, &versionLo, &flags))
 			{
-				cout << "IC Type" << (int)icType << endl;
-				cout << "Version maj " << versionHi << endl;
-				cout << "Version min " << versionLo << endl;
+				cout << "IC Type " << (int)icType << endl;
+				cout << "Version maj " << static_cast<int>(versionHi) << endl;
+				cout << "Version min " << static_cast<int>(versionLo) << endl;
 				cout << "Flags " << flags << endl;
 			}
 			else

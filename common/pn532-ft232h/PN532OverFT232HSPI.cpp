@@ -97,7 +97,7 @@ bool PN532OverFT232HSPI::ReadFrame(TargetFrameWriter &writer)
 	Timer t{timeout};
 	for (; t.IsRunning(); t.Update())
 	{
-		const array<uint8_t, 3> sr {0b10};
+		const array<uint8_t, 1> sr {0b10};
 		if (spi.Write(sr) != sr.size()) throw runtime_error {"SR write error"};
 
 		array<uint8_t, 1> rdy {0};

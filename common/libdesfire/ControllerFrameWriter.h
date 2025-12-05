@@ -1,6 +1,7 @@
 #ifndef D76EADC2_7364_4B71_B0BF_F7EBADFDE4FF
 #define D76EADC2_7364_4B71_B0BF_F7EBADFDE4FF
 
+#include <cstdint>
 #include <span>
 
 class ControllerFrameWriter

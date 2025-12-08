@@ -1,16 +1,47 @@
 #include <Desfire.h>
 #include <Pn532BeetleEsp32C6Spi.h>
-#include "soc/spi_reg.h"
+
+#include <soc/spi_reg.h>
+#include <driver/usb_serial_jtag.h>
+#include <driver/usb_serial_jtag_vfs.h>
+
+#include <card_layout.h>
+#include <secrets.h>
 #include <chrono>
 #include <exception>
 #include <iostream>
+#include <system_error>
 #include <thread>
 
 using namespace std;
 using namespace std::chrono;
 
+void check(esp_err_t err) {
+  if (err == ESP_OK) return;
+  throw system_error((int)err, system_category());
+}
+
+void check(esp_err_t err, const string &what) {
+  if (err == ESP_OK) return;
+  throw system_error((int)err, system_category(), what);
+}
+
+void error(const std::string &what) { throw runtime_error(what); }
+
 extern "C" void app_main(void)
 {
+	if (usb_serial_jtag_is_connected())
+	{
+		cout << "USB console connected, entering interactive mode.." << endl;
+
+		setvbuf(stdin, nullptr, _IONBF, 0);
+		usb_serial_jtag_driver_config_t usb_serial_jtag_config{.tx_buffer_size = 1024, .rx_buffer_size = 1024};
+		check(usb_serial_jtag_driver_install(&usb_serial_jtag_config), "JTAG driver install");
+		usb_serial_jtag_vfs_use_driver();
+
+		// TODO: invoke main setup, to configure WiFi access, so some basic diagnostic for WiFi, MQTT, card reading
+	}
+
 	cout << "running" << endl;
 	Pn532BeetleEsp32C6Spi pn_spi{20ms};
 

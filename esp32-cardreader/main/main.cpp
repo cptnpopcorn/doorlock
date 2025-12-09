@@ -6,7 +6,9 @@
 #include <driver/usb_serial_jtag_vfs.h>
 
 #include <card_layout.h>
+#include <interaction_loop.h>
 #include <secrets.h>
+#include "setup.h"
 #include <chrono>
 #include <exception>
 #include <iostream>
@@ -39,10 +41,13 @@ extern "C" void app_main(void)
 		check(usb_serial_jtag_driver_install(&usb_serial_jtag_config), "JTAG driver install");
 		usb_serial_jtag_vfs_use_driver();
 
-		// TODO: invoke main setup, to configure WiFi access, so some basic diagnostic for WiFi, MQTT, card reading
+		interaction_loop loop{};
+		setup s{loop.stop()};
+		loop.set(s);
+		loop.start();
 	}
 
-	cout << "running" << endl;
+	cout << "setting up PN532 SPI communication.." << endl;
 	Pn532BeetleEsp32C6Spi pn_spi{20ms};
 
 	while (true)

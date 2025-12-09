@@ -1,13 +1,13 @@
 cmake_minimum_required(VERSION 3.31)
 project(doorlock)
 
-include(config.cmake)
+include(config/config.cmake)
 
 add_library(card_secrets INTERFACE)
 target_include_directories(card_secrets INTERFACE ${COMMON_GENERATED_DIR})
 
 add_library(card_layout INTERFACE)
-target_include_directories(card_layout INTERFACE ${COMMON_CONFIG_DIR})
+target_include_directories(card_layout INTERFACE "config")
 
 add_subdirectory(libdesfire)
 add_subdirectory(libdesfire_tests)

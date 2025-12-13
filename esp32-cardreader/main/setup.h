@@ -13,6 +13,8 @@ public:
 
 private:
 	void show_config();
+	void select_ap();
+	void test_connect();
 
 	interaction& quit;
 	wifi_station& wifi;

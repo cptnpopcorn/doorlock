@@ -5,6 +5,7 @@ idf_component_register(
 	SRCS
 		"main.cpp"
 		"setup.cpp"
+		"ap_selection.cpp"
 	PRIV_REQUIRES
 		pn532_beetle_esp32c6
 		interaction

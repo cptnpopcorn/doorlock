@@ -1,4 +1,5 @@
 #include "Pn532BeetleEsp32C6Spi.h"
+#include "sdkconfig.h"
 #include <driver/gpio.h>
 #include <driver/spi_master.h>
 #include <FrameParser.h>
@@ -13,13 +14,15 @@
 using namespace std;
 using namespace std::chrono;
 
+#define CFG_PIN(x) static_cast<gpio_num_t>(CONFIG_##x)
+
 namespace Pins
 {
-	constexpr gpio_num_t Cs = GPIO_NUM_16;
-	constexpr gpio_num_t Rstpd = GPIO_NUM_17;
-	constexpr gpio_num_t Miso = GPIO_NUM_21;
-	constexpr gpio_num_t Mosi = GPIO_NUM_22;
-	constexpr gpio_num_t Sck = GPIO_NUM_23;
+	constexpr gpio_num_t Cs = CFG_PIN(PN532_SPI_CS_PIN_NUMBER);
+	constexpr gpio_num_t Rstpd = CFG_PIN(PN532_RSTPD_PIN_NUMBER);
+	constexpr gpio_num_t Miso = CFG_PIN(PN532_SPI_MISO_PIN_NUMBER);
+	constexpr gpio_num_t Mosi = CFG_PIN(PN532_SPI_MOSI_PIN_NUMBER);
+	constexpr gpio_num_t Sck = CFG_PIN(PN532_SPI_SCK_PIN_NUMBER);
 };
 
 Pn532BeetleEsp32C6Spi::Pn532BeetleEsp32C6Spi(const chrono::milliseconds &timeout) :

@@ -1,4 +1,8 @@
 menu "Door lock"
+menu "GPIO Pins"
+source "../components/pn532_beetle_esp32c6/KConfig.pn532"
+endmenu
+menu "MQTT"
 	config MQTT_BROKER_HOSTNAME
 		string "MQTT broker hostname"
 		default "test.mosquitto.org"
@@ -25,4 +29,5 @@ menu "Door lock"
 	help
 		Authenticate this client against the broker. The client certificate needs to be present in common/config/client.crt, the key in common/config/client.key
 	endif
+endmenu
 endmenu

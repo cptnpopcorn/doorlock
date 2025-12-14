@@ -1,0 +1,24 @@
+config PN532_SPI_CS_PIN_NUMBER
+	int "SPI Chip Select GPIO Pin Number"
+	range 0 30
+	default 16
+
+config PN532_RSTPD_PIN_NUMBER
+	int "PN532 RSTPD GPIO Pin Number"
+	range 0 30
+	default 17
+
+config PN532_SPI_MISO_PIN_NUMBER
+	int "SPI MISO GPIO Pin Number"
+	range 0 30
+	default 21
+
+config PN532_SPI_MOSI_PIN_NUMBER
+	int "SPI MOSI GPIO Pin Number"
+	range 0 30
+	default 22
+
+config PN532_SPI_SCK_PIN_NUMBER
+	int "SPI SCK GPIO Pin Number"
+	range 0 30
+	default 23

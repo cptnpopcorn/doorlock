@@ -53,9 +53,10 @@ future<void> publisher::is_connected() noexcept
 bool publisher::publish(const std::span<const uint8_t> &id)
 {
 	ostringstream msg;
-	msg << R"(","ID":)";
+	msg << R"({"ID":")";
 	msg << hex << setw(2) << setfill('0');
 	for (const auto& octet : id) msg << (int)octet;
+	msg << R"("})";
 
 	const auto str = msg.str();
 	const auto msg_id = esp_mqtt_client_publish(client, topic.c_str(), str.c_str(), str.length(), 1, 0);

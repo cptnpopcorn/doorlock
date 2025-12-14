@@ -37,6 +37,7 @@ public:
 private:
 	void show_config();
 	void set_topic();
+	void test_publish();
 
 	interaction& quit;
 	wifi_station& wifi;

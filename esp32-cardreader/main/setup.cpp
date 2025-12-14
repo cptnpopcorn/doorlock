@@ -2,13 +2,16 @@
 #include "console_input.h"
 #include "interaction_control.h"
 #include "app_storage.h"
+#include "card_layout.h"
 #include "mqtt_config.h"
+#include "publisher.h"
 #include "nvs_access.h"
 #include "wifi_connection.h"
 #include "wifi_station.h"
 #include "ap_selection.h"
 
 #include <iostream>
+#include <utility>
 
 using namespace std;
 
@@ -113,12 +116,14 @@ void mqtt_setup::start(interaction_control &control)
 	cout << "MQTT setup.." << endl;
     cout << "c - current config" << endl;
     cout << "t - set mqtt topic" << endl;
+	cout << "p - test publishing ID" << endl;
 	cout << "q - quit" << endl;
 
 	switch (cin.get())
 	{
 		case 'c': show_config(); return;
 		case 't': set_topic(); return;
+		case 'p': test_publish(); return;
 		case 'q': control.set(quit); return;
 	}
 }
@@ -126,8 +131,7 @@ void mqtt_setup::start(interaction_control &control)
 void mqtt_setup::show_config()
 {
 	cout << "broker URI: " << config.broker_host << endl;
-	cout << "topic root: " << config.topic_root << endl;
-	cout << "topic: " << nvs.get_str(app_storage::mqtt_topic_key) << endl;
+	cout << "topic: " << config.topic_root << '/' << nvs.get_str(app_storage::mqtt_topic_key) << endl;
 }
 
 void mqtt_setup::set_topic()
@@ -147,4 +151,36 @@ void mqtt_setup::set_topic()
 	}
 
 	nvs.set_str(app_storage::mqtt_topic_key, new_topic);
+}
+
+void mqtt_setup::test_publish()
+{
+	cout << "connecting WiFi.." << endl;
+    wifi_connection connection{wifi};
+	auto is_wifi_up = connection.is_up();
+
+	if (is_wifi_up.wait_for(5s) != future_status::ready)
+	{
+		cout << "WiFi connection timeout" << endl;
+		return;
+	}
+
+	const auto topic = config.topic_root + '/' + nvs.get_str(app_storage::mqtt_topic_key);
+	publisher p{config.broker_host, topic, config.ca_cert, config.client_cert, config.client_key};
+
+	cout << "connecting to MQTT broker.." << endl;
+	auto is_mqtt_connected = p.is_connected();
+	if (is_mqtt_connected.wait_for(5s) != future_status::ready)
+	{
+		cout << "MQTT connection timeout" << endl;
+		return;
+	}
+
+	cout << "publishing all-zero ID.." << endl;
+	array<uint8_t, to_underlying(FileSize::PublicuserId)> dummy_id{};
+	if (!p.publish(dummy_id))
+	{
+		cout << "MQTT publish failed" << endl;
+		return;
+	}
 }

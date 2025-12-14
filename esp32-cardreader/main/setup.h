@@ -20,15 +20,40 @@ private:
 	wifi_station& wifi;
 };
 
+class mqtt_config;
+class nvs_access;
+
+class mqtt_setup final : public interaction
+{
+public:
+	mqtt_setup(
+		interaction& quit,
+		wifi_station& wifi,
+		const mqtt_config& config,
+		nvs_access& nvs) noexcept;
+
+	void start(interaction_control&) override;
+
+private:
+	void show_config();
+	void set_topic();
+
+	interaction& quit;
+	wifi_station& wifi;
+	const mqtt_config& config;
+	nvs_access& nvs;
+};
+
 class setup final : public interaction
 {
 public:
-	setup(interaction& quit, wifi_station& wifi) noexcept;
+	setup(interaction& quit, wifi_station& wifi, const mqtt_config& mqtt_config, nvs_access& nvs) noexcept;
 	void start(interaction_control&) override;
 
 private:
 	interaction &quit;
 	wifi_setup wifi;
+	mqtt_setup mqtt;
 };
 
 #endif /* DC589AC8_033F_41DE_97DC_25696F1C71F7 */

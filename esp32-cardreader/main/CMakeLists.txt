@@ -5,12 +5,15 @@ idf_component_register(
 	SRCS
 		"main.cpp"
 		"setup.cpp"
+		"app_storage.cpp"
 		"ap_selection.cpp"
+		"mqtt_config.cpp"
 	PRIV_REQUIRES
 		pn532_beetle_esp32c6
 		interaction
 		error
 		util
+		publish
 		wifi
 		storage
 		esp_event

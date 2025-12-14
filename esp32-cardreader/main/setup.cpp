@@ -1,6 +1,9 @@
 #include "setup.h"
 #include "console_input.h"
 #include "interaction_control.h"
+#include "app_storage.h"
+#include "mqtt_config.h"
+#include "nvs_access.h"
 #include "wifi_connection.h"
 #include "wifi_station.h"
 #include "ap_selection.h"
@@ -9,7 +12,8 @@
 
 using namespace std;
 
-setup::setup(interaction &quit, wifi_station& wifi) noexcept : quit{quit}, wifi{*this, wifi}
+setup::setup(interaction &quit, wifi_station& wifi, const mqtt_config& mqtt_config, nvs_access& nvs) noexcept :
+	quit{quit}, wifi{*this, wifi}, mqtt{*this, wifi, mqtt_config, nvs}
 {
 }
 
@@ -17,17 +21,14 @@ void setup::start(interaction_control &control)
 {
 	cout << "card reader setup.." << endl;
 	cout << "w - wifi" << endl;
+	cout << "m - mqtt" << endl;
     cout << "q - quit" << endl;
 
     switch (cin.get())
     {
-		case 'w':
-			control.set(wifi);
-			return;
-
-		case 'q':
-			control.set(quit);
-			return;
+		case 'w': control.set(wifi); return;
+		case 'm': control.set(mqtt); return;
+		case 'q': control.set(quit); return;
 	}
 }
 
@@ -45,21 +46,10 @@ void wifi_setup::start(interaction_control &control)
 
 	switch (cin.get())
     {
-		case 'c':
-			show_config();
-			return;
-
-		case 's':
-			select_ap();
-			return;
-
-		case 't':
-			test_connect();
-			return;
-
-		case 'q':
-			control.set(quit);
-			return;
+		case 'c': show_config(); return;
+		case 's': select_ap(); return;
+		case 't': test_connect(); return;
+		case 'q': control.set(quit); return;
 	}
 }
 
@@ -107,4 +97,54 @@ void wifi_setup::test_connect()
     cout.flush();
   }
   cout << endl << "timeout reached" << endl;
+}
+
+mqtt_setup::mqtt_setup(
+	interaction &quit,
+	wifi_station &wifi,
+	const mqtt_config& config,
+	nvs_access& nvs) noexcept :
+	quit{quit}, wifi{wifi}, config{config}, nvs{nvs}
+{
+}
+
+void mqtt_setup::start(interaction_control &control)
+{
+	cout << "MQTT setup.." << endl;
+    cout << "c - current config" << endl;
+    cout << "t - set mqtt topic" << endl;
+	cout << "q - quit" << endl;
+
+	switch (cin.get())
+	{
+		case 'c': show_config(); return;
+		case 't': set_topic(); return;
+		case 'q': control.set(quit); return;
+	}
+}
+
+void mqtt_setup::show_config()
+{
+	cout << "broker URI: " << config.broker_host << endl;
+	cout << "topic root: " << config.topic_root << endl;
+	cout << "topic: " << nvs.get_str(app_storage::mqtt_topic_key) << endl;
+}
+
+void mqtt_setup::set_topic()
+{
+	cout << "enter new topic: ";
+	const auto new_topic = console_read_line();
+	cout << endl;
+	if (new_topic.length() == 0)
+	{
+		cout << "empty input -> no change" << endl;
+		return;
+	}
+	if (new_topic == nvs.get_str(app_storage::mqtt_topic_key))
+	{
+		cout << "topic identical -> no change" << endl;
+		return;
+	}
+
+	nvs.set_str(app_storage::mqtt_topic_key, new_topic);
 }

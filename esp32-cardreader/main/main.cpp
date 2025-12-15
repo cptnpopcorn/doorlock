@@ -84,6 +84,9 @@ extern "C" void app_main(void)
 {
 	try
 	{
+		cout << "setting up PN532 SPI communication.." << endl;
+		Pn532BeetleEsp32C6Spi pn_spi{500ms};
+
 		check(esp_event_loop_create_default());
 
 		nvs_access nvs{"cardreader"};
@@ -103,13 +106,10 @@ extern "C" void app_main(void)
 			const mqtt_config mqtt_config{mqtt_broker_hostname, mqtt_topic_root, get_ca_crt(), get_client_crt(), get_client_key()};
 
 			interaction_loop loop{};
-			setup s{loop.stop(), wifi, mqtt_config, nvs};
+			setup s{loop.stop(), wifi, mqtt_config, nvs, pn_spi};
 			loop.set(s);
 			loop.start();
 		}
-
-		cout << "setting up PN532 SPI communication.." << endl;
-		Pn532BeetleEsp32C6Spi pn_spi{20ms};
 
 		while (true)
 		{

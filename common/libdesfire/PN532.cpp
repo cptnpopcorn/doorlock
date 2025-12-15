@@ -294,7 +294,7 @@ bool PN532::ReadPassiveTargetID(uint8_t* u8_UidBuffer, uint8_t* pu8_UidLength, e
     uint8_t len = ReadData(mu8_PacketBuffer, 27);
     if (len < 2 || mu8_PacketBuffer[0] != PN532_COMMAND_INLISTPASSIVETARGET + 1)
     {
-        Utils::Print("ReadPassiveTargetID failed\r\n");
+        if (mu8_DebugLevel > 0) Utils::Print("ReadPassiveTargetID failed\r\n");
         return false;
     }   
 

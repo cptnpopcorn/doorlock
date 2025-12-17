@@ -210,6 +210,7 @@ void wifi_setup::test_connect()
 {
   cout << "connecting WiFi.." << endl;
   wifi_connection connection{wifi};
+  connection.start();
 
   cout << "getting IP address";
   auto is_up = connection.is_up();
@@ -279,8 +280,9 @@ void mqtt_setup::test_publish()
 {
 	cout << "connecting WiFi.." << endl;
     wifi_connection connection{wifi};
-	auto is_wifi_up = connection.is_up();
+	connection.start();
 
+	auto is_wifi_up = connection.is_up();
 	if (is_wifi_up.wait_for(5s) != future_status::ready)
 	{
 		cout << "WiFi connection timeout" << endl;

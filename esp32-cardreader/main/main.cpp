@@ -7,16 +7,20 @@
 #include <esp_event.h>
 #include <esp_sleep.h>
 
+#include "app_storage.h"
 #include "card_layout.h"
 #include "error.h"
 #include "interaction_loop.h"
 #include "mqtt_config.h"
 #include "nvs_access.h"
+#include "publisher.h"
 #include "secrets.h"
 #include "setup.h"
+#include "wifi_connection.h"
 #include "wifi_station.h"
 
 #include <array>
+#include <atomic>
 #include <chrono>
 #include <exception>
 #include <iostream>
@@ -99,7 +103,11 @@ extern "C" void app_main(void)
 
 		nvs_access nvs{"cardreader"};
 		wifi_station wifi{nvs};
-		
+
+		const string mqtt_broker_hostname{CONFIG_MQTT_BROKER_HOSTNAME};
+		const string mqtt_topic_root{CONFIG_MQTT_TOPIC_ROOT};
+		const mqtt_config mqtt_config{mqtt_broker_hostname, mqtt_topic_root, get_ca_crt(), get_client_crt(), get_client_key()};
+	
 		if (usb_serial_jtag_is_connected())
 		{
 			cout << "USB console connected, entering interactive mode.." << endl;
@@ -109,18 +117,22 @@ extern "C" void app_main(void)
 			check(usb_serial_jtag_driver_install(&usb_serial_jtag_config), "JTAG driver install");
 			usb_serial_jtag_vfs_use_driver();
 
-			const string mqtt_broker_hostname{CONFIG_MQTT_BROKER_HOSTNAME};
-			const string mqtt_topic_root{CONFIG_MQTT_TOPIC_ROOT};
-			const mqtt_config mqtt_config{mqtt_broker_hostname, mqtt_topic_root, get_ca_crt(), get_client_crt(), get_client_key()};
-
 			interaction_loop loop{};
 			setup s{loop.stop(), wifi, mqtt_config, nvs, pn_spi};
 			loop.set(s);
 			loop.start();
 		}
 
-		// TODO: connect wifi, set disconnection handler (that throws to provoke wait / reboot)
-		// TODO: connect MQTT
+		cout << "connecting WiFi.." << endl;
+		wifi_connection connection{wifi};
+		connection.start();
+		if (connection.is_up().wait_for(20s) != future_status::ready) throw runtime_error{"WiFi connection timeout"};
+
+		cout << "connecting to MQTT broker.." << endl;
+		const auto topic = mqtt_config.topic_root + '/' + nvs.get_str(app_storage::mqtt_topic_key);
+		publisher publisher{mqtt_config.broker_host, topic, mqtt_config.ca_cert, mqtt_config.client_cert, mqtt_config.client_key};
+		auto is_mqtt_connected = publisher.is_connected();
+		if (is_mqtt_connected.wait_for(5s) != future_status::ready) throw runtime_error{"MQTT connection timeout"};
 
 		cout << "setting up NFC chip.." << endl;
 
@@ -138,22 +150,15 @@ extern "C" void app_main(void)
 		des.SetDebugLevel(0);
 		des.begin();
 
-		if (!des.SetPassiveActivationRetries())
-		{
-			cout << "error configuring retries" << endl;
-			return;
-		}
-
-		if (!des.SamConfig())
-		{
-			cout << "could not configure secure access" << endl;
-			return;
-		}
+		if (!des.SetPassiveActivationRetries()) throw runtime_error{"error configuring card retries"};
+		if (!des.SamConfig())  runtime_error{"could not configure card secure access"};
 
 		cout << "waiting for card.." << endl;
 
 		for (;;this_thread::sleep_for(500ms))
 		{
+			(cout << '.').flush();
+			
 			array<uint8_t, 8> uid;
 			uint8_t uid_length {0};
 			eCardType cardType {};
@@ -191,7 +196,7 @@ extern "C" void app_main(void)
 				continue;
 			}
 
-			throw runtime_error{"USER ID FOUND"}; // TODO: produce MQTT msg from this
+			if (!publisher.publish(user_id)) throw runtime_error{"could not publish ID via MQTT"};
 		}
 	}
 	catch(const exception &e)

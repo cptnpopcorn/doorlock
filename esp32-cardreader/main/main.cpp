@@ -5,6 +5,7 @@
 #include <driver/usb_serial_jtag.h>
 #include <driver/usb_serial_jtag_vfs.h>
 #include <esp_event.h>
+#include <esp_sleep.h>
 
 #include "card_layout.h"
 #include "error.h"
@@ -15,11 +16,13 @@
 #include "setup.h"
 #include "wifi_station.h"
 
+#include <array>
 #include <chrono>
 #include <exception>
 #include <iostream>
 #include <system_error>
 #include <thread>
+#include <utility>
 
 using namespace std;
 using namespace std::chrono;
@@ -80,6 +83,11 @@ span<const uint8_t> get_client_key()
 }
 #endif
 
+static inline void set_key(AES& aes, const array<uint8_t, 16>& key, uint8_t version)
+{
+	aes.SetKeyData(key.data(), key.size(), version);
+}
+
 extern "C" void app_main(void)
 {
 	try
@@ -111,41 +119,79 @@ extern "C" void app_main(void)
 			loop.start();
 		}
 
-		while (true)
+		// TODO: connect wifi, set disconnection handler (that throws to provoke wait / reboot)
+		// TODO: connect MQTT
+
+		cout << "setting up NFC chip.." << endl;
+
+		AES piccMasterKey;
+		AES doorlockMasterKey;
+		AES doorlockWriteKey;
+		AES doorlockReadKey;
+
+		set_key(piccMasterKey, secrets::CARD_PICC_MASTER_AES_KEY, to_underlying(KeyVersionPicc::Master));
+		set_key(doorlockMasterKey, secrets::CARD_DOORLOCK_MASTER_AES_KEY, to_underlying(KeyVersionDoorlock::Master));
+		set_key(doorlockWriteKey, secrets::CARD_DOORLOCK_WRITE_AES_KEY, to_underlying(KeyVersionDoorlock::Write));
+		set_key(doorlockReadKey, secrets::CARD_DOORLOCK_READ_AES_KEY, to_underlying(KeyNumberDoorlock::Read));
+
+		Desfire des{pn_spi};
+		des.SetDebugLevel(0);
+		des.begin();
+
+		if (!des.SetPassiveActivationRetries())
 		{
-			Desfire des{pn_spi};
-			des.begin();
+			cout << "error configuring retries" << endl;
+			return;
+		}
 
-			cout << "waiting for 5 s" << endl;
-			this_thread::sleep_for(5s);
-			cout << "go" << endl;
+		if (!des.SamConfig())
+		{
+			cout << "could not configure secure access" << endl;
+			return;
+		}
 
-			try
+		cout << "waiting for card.." << endl;
+
+		for (;;this_thread::sleep_for(500ms))
+		{
+			array<uint8_t, 8> uid;
+			uint8_t uid_length {0};
+			eCardType cardType {};
+
+			if (!des.ReadPassiveTargetID(uid.data(), &uid_length, &cardType) || uid_length == 0) continue;
+
+			if (!des.SelectApplication(to_underlying(ApplicationId::Picc)))
 			{
-				uint8_t icType {};
-				uint8_t versionHi{};
-				uint8_t versionLo{};
-				uint8_t flags;
-				if (des.GetFirmwareVersion(&icType, &versionHi, &versionLo, &flags))
-				{
-					cout << "IC Type " << (int)icType << endl;
-					cout << "Version maj " << static_cast<int>(versionHi) << endl;
-					cout << "Version min " << static_cast<int>(versionLo) << endl;
-					cout << "Flags " << flags << endl;
-				}
-				else
-				{
-					cout << "error reading FW version" << endl;
-				}
+				cout << "not a \"DESFire EV\" card" << endl;
+				continue;
 			}
-			catch(const exception& e)
+			
+			if (!des.Authenticate(to_underlying(KeyNumberPicc::Master), &piccMasterKey))
 			{
-				cout << e.what() << endl;
-				return;
+				cout << "card protected with unknown master key" << endl;
+				continue;
 			}
 
-			cout << "releasing" << endl;
-			this_thread::sleep_for(1s);
+			if (!des.SelectApplication(to_underlying(ApplicationId::Doorlock)))
+			{
+				cout << "no data present" << endl;
+				continue;
+			}
+
+			if (!des.Authenticate(to_underlying(KeyNumberDoorlock::Read), &doorlockReadKey))
+			{
+				cout << "application protected with unknown key" << endl;
+				continue;
+			}
+
+			array<uint8_t, static_cast<size_t>(FileSize::PublicuserId)> user_id;
+			if (!des.ReadFileData(to_underlying(FileId::PublicUserId), 0, user_id.size(), user_id.data()))
+			{
+				cout << "could not read user ID" << endl;
+				continue;
+			}
+
+			throw runtime_error{"USER ID FOUND"}; // TODO: produce MQTT msg from this
 		}
 	}
 	catch(const exception &e)
@@ -153,5 +199,6 @@ extern "C" void app_main(void)
 		cerr << e.what() << endl;
 	}
 
-	cout << "ended" << endl;
+	cout << "wait and reboot" << endl;
+	esp_deep_sleep(4'000'000);
 }

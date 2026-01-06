@@ -44,14 +44,9 @@ void check(esp_err_t err, const string &what) {
 void error(const std::string &what) { throw runtime_error(what); }
 
 #ifdef CONFIG_MQTT_USE_TLS
-extern "C"
-{
-    extern const uint8_t _binary_ca_crt_start[] asm("_binary_ca_crt_start");
-    extern const uint8_t _binary_ca_crt_end[] asm("_binary_ca_crt_end");
-}
 span<const uint8_t> get_ca_crt()
 {
-    return {&_binary_ca_crt_start[0], &_binary_ca_crt_end[0]};
+    return secrets::MQTT_CA_CERT;
 }
 #else
 span<const uint8_t> get_ca_crt()
@@ -63,17 +58,13 @@ span<const uint8_t> get_ca_crt()
 #ifdef CONFIG_MQTT_TLS_CLIENT_AUTH
 extern "C"
 {
-    extern const uint8_t _binary_client_crt_start[] asm("_binary_client_crt_start");
-    extern const uint8_t _binary_client_crt_end[] asm("_binary_client_crt_end");
-    extern const uint8_t _binary_client_key_start[] asm("_binary_client_key_start");
-    extern const uint8_t _binary_client_key_end[] asm("_binary_client_key_end");
     span<const uint8_t> get_client_crt()
     {
-        return {&_binary_client_crt_start[0], &_binary_client_crt_end[0]};
+        return secrets::MQTT_CLIENT_CERT;
     }
     span<const uint8_t> get_client_key()
     {
-        return {&_binary_client_key_start[0], &_binary_client_key_end[0]};
+        return secrets::MQTT_CLIENT_KEY;
     }
 }
 #else

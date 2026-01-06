@@ -14,7 +14,7 @@ function(create_string_blob_array BLOB_LITERAL ARRNAME OUTVAR)
     endif()
 
     set(_decl
-"constexpr auto ${ARRNAME} = std::to_array(R\"${_delim}(
+"constexpr auto ${ARRNAME} = to_u8_array(R\"${_delim}(
 ${_blob}
 )${_delim}\");")
 

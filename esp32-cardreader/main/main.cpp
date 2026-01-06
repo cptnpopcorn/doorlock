@@ -110,6 +110,7 @@ extern "C" void app_main(void)
 	
 		if (usb_serial_jtag_is_connected())
 		{
+			this_thread::sleep_for(10s); // allows to quickly open a terminal, after plugging in USB
 			cout << "USB console connected, entering interactive mode.." << endl;
 
 			setvbuf(stdin, nullptr, _IONBF, 0);

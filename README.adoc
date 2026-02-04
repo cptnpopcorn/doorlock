@@ -1,6 +1,28 @@
 # Introduction
 
-TBD
+This repository is based on code from elmu's electronic doorlock project (see `archive` folder). This project was a real-use, working application to manage access to a house using encrypted DESFire cards from NXP.
+
+What it does is changing the target to a more modular application, where the card verification and door control is separated. The central control mechanism that links those two components can be anything that communicates via MQTT.
+
+A PC-plus-FT232H dongle based programmer application is provided, to manually write user IDs on cards.
+
+## Project Structure
+
+The top folders
+
+common:: shared, generic C++ libraries and applications (CMake-based), and *global configuration*
+common-esp32:: shared, esp32-specific libaries ("components")
+esp32-cardreader:: esp32 application reading NFC cards and pubslishing extracted user IDs via MQTT
+
+### Common
+
+config:: the one central place to define your secret keys used to encrypt cards and MQTT communication
+cardwriter:: desktop CLI application to verify and write cards via a FT232H USB/SPI dongle
+external:: some CMake magic to find and integrate your locally installed FTDI dongle libraries
+libdesfire:: re-factored NXP PN532 library from elmu (now with runtime hardware abstraction)
+libdesfire_tests:: unit tests for rewritten PN532 message parsing abstraction
+pn532-ft232h:: PN532 interface implementation via FT232H, working for SPI. Tried I2C but since the FT232H does not support the clock stretching applied by the PN532, it seems to be a dead end..
+test-ft232h:: some basic system test to verify / diagnose basic FT232H + PN532 operations
 
 ## Using PN532 from a PC via a FT232H USB Dongle
 

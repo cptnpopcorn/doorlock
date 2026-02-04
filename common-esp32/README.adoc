@@ -1,0 +1,30 @@
+# Introduction
+
+TBD
+
+## Using PN532 from a PC via a FT232H USB Dongle
+
+### Required libraries
+
+* You need to get the ft2xx user space driver (dll or static) as provided by FTDI (https://ftdichip.com/drivers/d2xx-drivers/), including a lib and header file.
+* You will also need the MPSSE library, which works on top of the ft2xx library (https://ftdichip.com/software-examples/mpsse-projects/libmpsse-spi-examples/). It includes the sources and you can build it yourself (I had to do that for my Win11 Arm64). I chose to use the static version of that library, see link:src/pn532-ft232h/CMakeLists.txt[CMakeLists.txt] of the `pn532-ft232h` library.
+
+#### Making the FTDI libraries accessible in this project
+
+Since you will have _your_ version of these libraries, depending on your system, and you may want to put them where _you_ find it practical, you will have to tell CMake how to find them, for example using your local user configuration. I think it is rather good practice to not have any user-specific settings with local paths included in this repository.
+
+In Visual Studio Code, you may add something like this to your user settings JSON file:
+
+[,json]
+----
+"cmake.configureSettings": {
+		"CMAKE_TOOLCHAIN_FILE": "C:/Users/hagen/cmake/global_toolchain.cmake"
+----
+
+...where you define additional include and library paths in that toolchain file, for example
+
+[,json]
+----
+set(CMAKE_CXX_FLAGS_INIT "${CMAKE_CXX_FLAGS_INIT} /IC:/Users/hagen/Documents/ft232h")
+set(CMAKE_EXE_LINKER_FLAGS_INIT "${CMAKE_EXE_LINKER_FLAGS_INIT} /LIBPATH:C:/Users/hagen/Documents/ft232h")
+----

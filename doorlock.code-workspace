@@ -5,6 +5,9 @@
 		},
 		{
 			"path": "esp32-cardreader"
+		},
+		{
+			"path": "common-esp32"
 		}
 	],
 	"settings": {

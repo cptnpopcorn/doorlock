@@ -1,6 +1,6 @@
 menu "Door lock"
 menu "GPIO Pins"
-source "../components/pn532_beetle_esp32c6/KConfig.pn532"
+source "../../common-esp32/components/pn532_beetle_esp32c6/KConfig.pn532"
 endmenu
 menu "MQTT"
 	config MQTT_BROKER_HOSTNAME

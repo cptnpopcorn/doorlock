@@ -24,6 +24,12 @@ libdesfire_tests:: unit tests for rewritten PN532 message parsing abstraction
 pn532-ft232h:: PN532 interface implementation via FT232H, working for SPI. Tried I2C but since the FT232H does not support the clock stretching applied by the PN532, it seems to be a dead end..
 test-ft232h:: some basic system test to verify / diagnose basic FT232H + PN532 operations
 
+## Card reader application (ESP32)
+
+### Configuration (ESP-IDF menuconfig)
+
+You can set up your specific MQTT subject, encryption etc. under the `MQTT` component settings. For the PN532 specific GPIO pins, they can be changed in the `PN532 GPIO Pins` section.
+
 ## Using PN532 from a PC via a FT232H USB Dongle
 
 ### Required libraries

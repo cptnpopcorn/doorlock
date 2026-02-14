@@ -13,7 +13,7 @@ idf_component_register(
 		interaction
 		error
 		util
-		publish
+		mqtt_roles
 		wifi
 		storage
 		esp_event

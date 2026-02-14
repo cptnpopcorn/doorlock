@@ -8,6 +8,9 @@
 		},
 		{
 			"path": "common-esp32"
+		},
+		{
+			"path": "esp32-dooropener"
 		}
 	],
 	"settings": {

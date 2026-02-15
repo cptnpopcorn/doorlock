@@ -1,7 +1,5 @@
 #ifndef BA162673_FD06_4B6F_8CD5_C45003CFE12D
 #define BA162673_FD06_4B6F_8CD5_C45003CFE12D
-#ifndef B24B21E0_30DA_4083_A2D3_F80A82371EA0
-#define B24B21E0_30DA_4083_A2D3_F80A82371EA0
 
 #include <wifi_scan_visitor.h>
 
@@ -20,8 +18,5 @@ class ap_selection final : public wifi_scan_visitor {
   std::string selected_ssid;
   bool stop;
 };
-
-#endif /* B24B21E0_30DA_4083_A2D3_F80A82371EA0 */
-
 
 #endif /* BA162673_FD06_4B6F_8CD5_C45003CFE12D */

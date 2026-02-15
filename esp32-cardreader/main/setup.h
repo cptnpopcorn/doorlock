@@ -3,23 +3,7 @@
 
 #include "interaction.h"
 #include "mqtt_setup.h"
-
-class wifi_station;
-
-class wifi_setup final : public interaction
-{
-public:
-	wifi_setup(interaction& quit, wifi_station& wifi) noexcept;
-	void start(interaction_control&) override;
-
-private:
-	void show_config();
-	void select_ap();
-	void test_connect();
-
-	interaction& quit;
-	wifi_station& wifi;
-};
+#include "wifi_setup.h"
 
 class PN532Interface;
 

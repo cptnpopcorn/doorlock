@@ -11,6 +11,7 @@ idf_component_register(
 		mqtt_roles
 		mqtt_roles_setup
 		wifi
+		wifi_setup
 		storage
 		esp_event
 		driver

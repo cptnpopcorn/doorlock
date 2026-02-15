@@ -4,6 +4,7 @@
 #include "app_storage.h"
 #include "card_layout.h"
 #include "mqtt_config.h"
+#include "mqtt_topic.h"
 #include "publisher.h"
 #include "nvs_access.h"
 #include "wifi_connection.h"
@@ -238,14 +239,18 @@ void mqtt_setup::start(interaction_control &control)
 {
 	cout << "MQTT setup.." << endl;
     cout << "c - current config" << endl;
-    cout << "t - set mqtt topic" << endl;
+    cout << "s - set site" << endl;
+    cout << "r - set room" << endl;
+    cout << "d - set door" << endl;
 	cout << "p - test publishing ID" << endl;
 	cout << "q - quit" << endl;
 
 	switch (cin.get())
 	{
 		case 'c': show_config(); return;
-		case 't': set_topic(); return;
+		case 's': set_topic(app_storage::mqtt_site_key); return;
+		case 'r': set_topic(app_storage::mqtt_room_key); return;
+		case 'd': set_topic(app_storage::mqtt_door_key); return;
 		case 'p': test_publish(); return;
 		case 'q': control.set(quit); return;
 	}
@@ -254,12 +259,12 @@ void mqtt_setup::start(interaction_control &control)
 void mqtt_setup::show_config()
 {
 	cout << "broker URI: " << config.broker_host << endl;
-	cout << "topic: " << config.topic_root << '/' << nvs.get_str(app_storage::mqtt_topic_key) << endl;
+	cout << "topic: " << app_storage::read_topic(nvs).str() << endl;
 }
 
-void mqtt_setup::set_topic()
+void mqtt_setup::set_topic(const char* key)
 {
-	cout << "enter new topic: ";
+	cout << "enter " << key << ": ";
 	const auto new_topic = console_read_line();
 	cout << endl;
 	if (new_topic.length() == 0)
@@ -267,13 +272,13 @@ void mqtt_setup::set_topic()
 		cout << "empty input -> no change" << endl;
 		return;
 	}
-	if (new_topic == nvs.get_str(app_storage::mqtt_topic_key))
+	if (new_topic == nvs.get_str(key))
 	{
 		cout << "topic identical -> no change" << endl;
 		return;
 	}
 
-	nvs.set_str(app_storage::mqtt_topic_key, new_topic);
+	nvs.set_str(key, new_topic);
 }
 
 void mqtt_setup::test_publish()
@@ -289,8 +294,7 @@ void mqtt_setup::test_publish()
 		return;
 	}
 
-	const auto topic = config.topic_root + '/' + nvs.get_str(app_storage::mqtt_topic_key);
-	publisher p{config.broker_host, topic, config.ca_cert, config.client_cert, config.client_key};
+	publisher p{config.broker_host, app_storage::read_topic(nvs).str(), config.ca_cert, config.client_cert, config.client_key};
 
 	cout << "connecting to MQTT broker.." << endl;
 	auto is_mqtt_connected = p.is_connected();

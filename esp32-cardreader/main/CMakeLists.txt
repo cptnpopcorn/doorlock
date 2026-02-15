@@ -7,7 +7,6 @@ idf_component_register(
 		"setup.cpp"
 		"app_storage.cpp"
 		"ap_selection.cpp"
-		"mqtt_config.cpp"
 	PRIV_REQUIRES
 		pn532_beetle_esp32c6
 		interaction

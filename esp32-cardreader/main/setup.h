@@ -36,7 +36,7 @@ public:
 
 private:
 	void show_config();
-	void set_topic();
+	void set_topic(const char* key);
 	void test_publish();
 
 	interaction& quit;

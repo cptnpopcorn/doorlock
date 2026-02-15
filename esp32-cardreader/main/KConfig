@@ -1,15 +1,9 @@
 menu "MQTT"
 	config MQTT_BROKER_HOSTNAME
-		string "MQTT broker hostname"
+		string "broker hostname"
 		default "test.mosquitto.org"
 		help
 			MQTT broker for published measurements
-
-	config MQTT_TOPIC_ROOT
-		string "MQTT root topic"
-		default "random237865235/cardreader"
-		help
-			The prefix to the MQTT topic - can be extended using console setup
 
 	config MQTT_USE_TLS
 		bool "MQTT use encryption (TLS)"

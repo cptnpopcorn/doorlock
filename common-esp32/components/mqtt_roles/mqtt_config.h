@@ -12,15 +12,12 @@ public:
 
 	mqtt_config(
 		const std::string &broker_host,
-		const std::string &topic_root,
 		const cert_t &ca_cert,
 		const cert_t &client_cert,
 		const cert_t &client_key) noexcept;
 
 	const std::string broker_host;
-	const std::string topic_root;
 	const cert_t ca_cert;
-
 	// those are either both present or both not present, to use client auth
 	const cert_t client_cert;
 	const cert_t client_key;

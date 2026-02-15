@@ -95,9 +95,11 @@ extern "C" void app_main(void)
 		nvs_access nvs{"cardreader"};
 		wifi_station wifi{nvs};
 
-		const string mqtt_broker_hostname{CONFIG_MQTT_BROKER_HOSTNAME};
-		const string mqtt_topic_root{CONFIG_MQTT_TOPIC_ROOT};
-		const mqtt_config mqtt_config{mqtt_broker_hostname, mqtt_topic_root, get_ca_crt(), get_client_crt(), get_client_key()};
+		const mqtt_config mqtt_config{
+			CONFIG_MQTT_BROKER_HOSTNAME,
+			get_ca_crt(),
+			get_client_crt(),
+			get_client_key()};
 	
 		if (usb_serial_jtag_is_connected())
 		{
@@ -121,8 +123,7 @@ extern "C" void app_main(void)
 		if (connection.is_up().wait_for(20s) != future_status::ready) throw runtime_error{"WiFi connection timeout"};
 
 		cout << "connecting to MQTT broker.." << endl;
-		const auto topic = mqtt_config.topic_root + '/' + nvs.get_str(app_storage::mqtt_topic_key);
-		publisher publisher{mqtt_config.broker_host, topic, mqtt_config.ca_cert, mqtt_config.client_cert, mqtt_config.client_key};
+		publisher publisher{mqtt_config.broker_host,  app_storage::read_topic(nvs).str(), mqtt_config.ca_cert, mqtt_config.client_cert, mqtt_config.client_key};
 		auto is_mqtt_connected = publisher.is_connected();
 		if (is_mqtt_connected.wait_for(5s) != future_status::ready) throw runtime_error{"MQTT connection timeout"};
 

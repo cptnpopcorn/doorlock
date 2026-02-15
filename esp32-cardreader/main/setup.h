@@ -1,7 +1,8 @@
 #ifndef DC589AC8_033F_41DE_97DC_25696F1C71F7
 #define DC589AC8_033F_41DE_97DC_25696F1C71F7
 
-#include <interaction.h>
+#include "interaction.h"
+#include "mqtt_setup.h"
 
 class wifi_station;
 
@@ -18,31 +19,6 @@ private:
 
 	interaction& quit;
 	wifi_station& wifi;
-};
-
-class mqtt_config;
-class nvs_access;
-
-class mqtt_setup final : public interaction
-{
-public:
-	mqtt_setup(
-		interaction& quit,
-		wifi_station& wifi,
-		const mqtt_config& config,
-		nvs_access& nvs) noexcept;
-
-	void start(interaction_control&) override;
-
-private:
-	void show_config();
-	void set_topic(const char* key);
-	void test_publish();
-
-	interaction& quit;
-	wifi_station& wifi;
-	const mqtt_config& config;
-	nvs_access& nvs;
 };
 
 class PN532Interface;

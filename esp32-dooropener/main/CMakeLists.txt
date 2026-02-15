@@ -9,6 +9,7 @@ idf_component_register(
 		error
 		util
 		mqtt_roles
+		mqtt_roles_setup
 		wifi
 		storage
 		esp_event

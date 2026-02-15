@@ -5,7 +5,7 @@
 
 class nvs_access;
 
-class app_storage final
+class mqtt_storage final
 {
 public:
 

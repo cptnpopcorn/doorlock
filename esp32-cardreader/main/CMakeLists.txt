@@ -5,7 +5,6 @@ idf_component_register(
 	SRCS
 		"main.cpp"
 		"setup.cpp"
-		"app_storage.cpp"
 		"ap_selection.cpp"
 	PRIV_REQUIRES
 		pn532_beetle_esp32c6
@@ -13,6 +12,7 @@ idf_component_register(
 		error
 		util
 		mqtt_roles
+		mqtt_roles_setup
 		wifi
 		storage
 		esp_event

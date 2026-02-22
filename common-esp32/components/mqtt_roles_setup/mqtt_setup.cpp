@@ -6,7 +6,7 @@
 #include "mqtt_config.h"
 #include "mqtt_storage.h"
 #include "mqtt_topic.h"
-#include "publisher.h"
+#include "mqtt_wrapper.h"
 #include "nvs_access.h"
 #include "wifi_connection.h"
 #include "wifi_station.h"
@@ -85,7 +85,7 @@ void mqtt_setup::test_publish()
 		return;
 	}
 
-	publisher p{config.broker_host, mqtt_storage::read_topic(nvs).str(), config.ca_cert, config.client_cert, config.client_key};
+	mqtt_wrapper p{config.broker_host, mqtt_storage::read_topic(nvs).str(), config.ca_cert, config.client_cert, config.client_key};
 
 	cout << "connecting to MQTT broker.." << endl;
 	auto is_mqtt_connected = p.is_connected();

@@ -5,16 +5,15 @@
 
 #include <condition_variable>
 #include <cstdint>
+#include <functional>
 #include <future>
 #include <mutex>
 #include <span>
 #include <string>
 
-class wifi_connection;
-
-class publisher final {
+class mqtt_wrapper final {
 public:
-	publisher(
+	mqtt_wrapper(
 		const std::string& broker_host,
 		const std::string& topic,
 		const std::span<const uint8_t>& ca_cert,
@@ -23,7 +22,9 @@ public:
 
 	std::future<void> is_connected() noexcept;
 	bool publish(const std::span<const uint8_t>&);
-	~publisher();
+	bool subscribe(std::function<void(const std::span<const uint8_t>&)> receive);
+
+	~mqtt_wrapper();
 
 private:
 	void handle_event(esp_event_base_t base, int32_t id, void* data);
@@ -35,6 +36,8 @@ private:
 	std::mutex tx_lock;
 	std::condition_variable tx_cond;
 	int publish_id;
+	std::function<void(const std::span<const uint8_t>&)> receive;
+	int subscribe_id;
 };
 
 #endif /* AA38B310_1E68_4268_8387_AA6266CDEAFC */

@@ -15,5 +15,5 @@
 
 extern "C" void app_main(void)
 {
-	// TODO
+	check(esp_event_loop_create_default());
 }

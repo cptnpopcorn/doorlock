@@ -13,7 +13,7 @@
 #include "interaction_loop.h"
 #include "mqtt_config.h"
 #include "nvs_access.h"
-#include "publisher.h"
+#include "mqtt_wrapper.h"
 #include "secrets.h"
 #include "setup.h"
 #include "wifi_connection.h"
@@ -123,7 +123,7 @@ extern "C" void app_main(void)
 		if (connection.is_up().wait_for(20s) != future_status::ready) throw runtime_error{"WiFi connection timeout"};
 
 		cout << "connecting to MQTT broker.." << endl;
-		publisher publisher{mqtt_config.broker_host,  mqtt_storage::read_topic(nvs).str(), mqtt_config.ca_cert, mqtt_config.client_cert, mqtt_config.client_key};
+		mqtt_wrapper publisher{mqtt_config.broker_host,  mqtt_storage::read_topic(nvs).str(), mqtt_config.ca_cert, mqtt_config.client_cert, mqtt_config.client_key};
 		auto is_mqtt_connected = publisher.is_connected();
 		if (is_mqtt_connected.wait_for(5s) != future_status::ready) throw runtime_error{"MQTT connection timeout"};
 

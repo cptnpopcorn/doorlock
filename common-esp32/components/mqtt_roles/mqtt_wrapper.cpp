@@ -1,16 +1,23 @@
-#include "publisher.h"
+#include "mqtt_wrapper.h"
 #include "error.h"
 #include "wifi_connection.h"
 
 #include <sstream>
 #include <iomanip>
+#include <utility>
 
 using namespace std;
 using namespace std::chrono;
 
-publisher::publisher(const string &broker_host, const string &topic, const span<const uint8_t> &ca_cert,
-					 const std::span<const uint8_t> &client_cert, const std::span<const uint8_t> &client_key)
-	: client{nullptr}, topic{topic}
+mqtt_wrapper::mqtt_wrapper(
+	const string &broker_host,
+	const string &topic,
+	const span<const uint8_t> &ca_cert,
+	const span<const uint8_t> &client_cert,
+	const span<const uint8_t> &client_key) :
+	client{nullptr},
+	topic{topic},
+	receive { [](const auto&) {} }
 {
 	esp_mqtt_client_config_t config{};
 	config.broker.address.hostname = broker_host.c_str();
@@ -41,16 +48,16 @@ publisher::publisher(const string &broker_host, const string &topic, const span<
 	client = esp_mqtt_client_init(&config);
 	if (client == nullptr)
 		throw runtime_error("MQTT client creation");
-	event_handle = mqtt_register_event(client, MQTT_EVENT_ANY, this, BOUNCE(publisher, handle_event));
+	event_handle = mqtt_register_event(client, MQTT_EVENT_ANY, this, BOUNCE(mqtt_wrapper, handle_event));
 	check(esp_mqtt_client_start(client), "MQTT start");
 }
 
-future<void> publisher::is_connected() noexcept
+future<void> mqtt_wrapper::is_connected() noexcept
 {
 	return connected.get_future();
 }
 
-bool publisher::publish(const std::span<const uint8_t> &id)
+bool mqtt_wrapper::publish(const std::span<const uint8_t> &id)
 {
 	ostringstream msg;
 	msg << R"({"ID":")";
@@ -69,14 +76,21 @@ bool publisher::publish(const std::span<const uint8_t> &id)
 	}
 }
 
-publisher::~publisher()
+bool mqtt_wrapper::subscribe(std::function<void(const std::span<const uint8_t> &)> receive)
+{
+	this->receive = move(receive);
+	subscribe_id = esp_mqtt_client_subscribe_single(client, topic.c_str(), 1);
+	return subscribe_id >= 0;
+}
+
+mqtt_wrapper::~mqtt_wrapper()
 {
 	check(esp_mqtt_client_stop(client), "stop mqtt client");
 	event_handle = {};
 	check(esp_mqtt_client_destroy(client), "release mqtt client");
 }
 
-void publisher::handle_event(esp_event_base_t base, int32_t id, void *data)
+void mqtt_wrapper::handle_event(esp_event_base_t base, int32_t id, void *data)
 {
 	switch (static_cast<esp_mqtt_event_id_t>(id))
 	{
@@ -90,6 +104,13 @@ void publisher::handle_event(esp_event_base_t base, int32_t id, void *data)
 			publish_id = (reinterpret_cast<esp_mqtt_event_handle_t>(data))->msg_id;
 		}
 		tx_cond.notify_one();
+		return;
+
+	case MQTT_EVENT_DATA:
+		{
+			auto e = reinterpret_cast<esp_mqtt_event_handle_t>(data);
+			receive({reinterpret_cast<uint8_t*>(e->data), static_cast<size_t>(e->data_len)});
+		}
 		return;
 
 	default:

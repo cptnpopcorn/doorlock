@@ -15,6 +15,7 @@ idf_component_register(
 		storage
 		esp_event
 		driver
+		rapidjson
 	INCLUDE_DIRS
 		${COMMON_GENERATED_DIR}
 		${COMMON_CONFIG_DIR}

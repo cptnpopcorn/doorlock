@@ -24,7 +24,10 @@ setup::setup(
 	const mqtt_config& mqtt_config,
 	nvs_access& nvs,
 	PN532Interface& card_interface) noexcept :
-	quit{quit}, wifi{*this, wifi}, mqtt{*this, wifi, mqtt_config, nvs}, card_interface{card_interface}
+	quit{quit},
+	wifi{*this, wifi},
+	mqtt{*this, wifi, mqtt_config, nvs},
+	card_interface{card_interface}
 {
 }
 

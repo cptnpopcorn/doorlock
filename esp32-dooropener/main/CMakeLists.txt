@@ -4,6 +4,8 @@ include(${COMMON_CONFIG_DIR}/config.cmake)
 idf_component_register(
 	SRCS
 		"main.cpp"
+		"open_message_builder.cpp"
+		"setup.cpp"
 	PRIV_REQUIRES
 		interaction
 		error

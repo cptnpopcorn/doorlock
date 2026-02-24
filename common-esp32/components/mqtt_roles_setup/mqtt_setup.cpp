@@ -33,7 +33,8 @@ void mqtt_setup::start(interaction_control &control)
     cout << "s - set site" << endl;
     cout << "r - set room" << endl;
     cout << "d - set door" << endl;
-	cout << "p - test publishing ID" << endl;
+	cout << "p - test publishing card ID" << endl;
+	cout << "l - test subscription to door open" << endl;
 	cout << "q - quit" << endl;
 
 	switch (cin.get())
@@ -43,6 +44,7 @@ void mqtt_setup::start(interaction_control &control)
 		case 'r': set_topic(mqtt_storage::mqtt_room_key); return;
 		case 'd': set_topic(mqtt_storage::mqtt_door_key); return;
 		case 'p': test_publish(); return;
+		case 'l': test_subscribe(); return;
 		case 'q': control.set(quit); return;
 	}
 }
@@ -50,7 +52,8 @@ void mqtt_setup::start(interaction_control &control)
 void mqtt_setup::show_config()
 {
 	cout << "broker URI: " << config.broker_host << endl;
-	cout << "topic: " << mqtt_storage::read_topic(nvs).str() << endl;
+	cout << "card reader topic: " << mqtt_storage::read_topic(nvs).card_reader_str() << endl;
+	cout << "door opener topic: " << mqtt_storage::read_topic(nvs).door_opener_str() << endl;
 }
 
 void mqtt_setup::set_topic(const char* key)
@@ -85,10 +88,10 @@ void mqtt_setup::test_publish()
 		return;
 	}
 
-	mqtt_wrapper p{config.broker_host, mqtt_storage::read_topic(nvs).str(), config.ca_cert, config.client_cert, config.client_key};
+	mqtt_wrapper publisher{config.broker_host, mqtt_storage::read_topic(nvs).card_reader_str(), config.ca_cert, config.client_cert, config.client_key};
 
 	cout << "connecting to MQTT broker.." << endl;
-	auto is_mqtt_connected = p.is_connected();
+	auto is_mqtt_connected = publisher.is_connected();
 	if (is_mqtt_connected.wait_for(5s) != future_status::ready)
 	{
 		cout << "MQTT connection timeout" << endl;
@@ -97,9 +100,47 @@ void mqtt_setup::test_publish()
 
 	cout << "publishing all-zero ID.." << endl;
 	array<uint8_t, to_underlying(FileSize::PublicuserId)> dummy_id{};
-	if (!p.publish(dummy_id))
+	if (!publisher.publish(dummy_id))
 	{
 		cout << "MQTT publish failed" << endl;
 		return;
 	}
+}
+
+void mqtt_setup::test_subscribe()
+{
+	cout << "connecting WiFi.." << endl;
+    wifi_connection connection{wifi};
+	connection.start();
+
+	auto is_wifi_up = connection.is_up();
+	if (is_wifi_up.wait_for(5s) != future_status::ready)
+	{
+		cout << "WiFi connection timeout" << endl;
+		return;
+	}
+
+	mqtt_wrapper subscriber{config.broker_host, mqtt_storage::read_topic(nvs).door_opener_str(), config.ca_cert, config.client_cert, config.client_key};
+
+	cout << "connecting to MQTT broker.." << endl;
+	auto is_mqtt_connected = subscriber.is_connected();
+	if (is_mqtt_connected.wait_for(5s) != future_status::ready)
+	{
+		cout << "MQTT connection timeout" << endl;
+		return;
+	}
+
+	cout << "subscribing to topic.." << endl;
+
+	if (!subscriber.subscribe([](const auto &data){
+		string_view text(reinterpret_cast<const char*>(data.data()), data.size());
+		cout << "received message: " << text << endl;
+	}))
+	{
+		cout << "subscription failed" << endl;
+		return;
+	}
+
+	cout << "waiting for messages (8s).." << endl;
+	this_thread::sleep_for(8s);
 }

@@ -7,7 +7,12 @@ mqtt_topic::mqtt_topic(const string &topic_site, const string &topic_room, const
 {
 }
 
-std::string mqtt_topic::str() const
+std::string mqtt_topic::card_reader_str() const
 {
 	return "site/" + topic_site + "/room/" + topic_room + "/door/" + topic_door + "/cardreader/card-presented";
+}
+
+std::string mqtt_topic::door_opener_str() const
+{
+	return "site/" + topic_site + "/room/" + topic_room + "/door/" + topic_door + "/doorcontroller/open";
 }

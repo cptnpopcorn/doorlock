@@ -42,6 +42,21 @@ bool OpenMessageBuilder::Bool(bool b)
 	return true;
 }
 
+bool OpenMessageBuilder::is_valid() const noexcept
+{
+	return hasOpen;
+}
+
+bool OpenMessageBuilder::get_open() const noexcept
+{
+	return isOpen;
+}
+
+string_view OpenMessageBuilder::get_user() const noexcept
+{
+	return user;
+}
+
 void OpenMessageBuilder::unexpected_bool(const bool &)
 {
 	throw runtime_error {"invalid JSON input (unexpected bool)"};

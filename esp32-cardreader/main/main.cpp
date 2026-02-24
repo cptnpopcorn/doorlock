@@ -122,8 +122,8 @@ extern "C" void app_main(void)
 		connection.start();
 		if (connection.is_up().wait_for(20s) != future_status::ready) throw runtime_error{"WiFi connection timeout"};
 
-		cout << "connecting to MQTT broker.." << endl;
-		mqtt_wrapper publisher{mqtt_config.broker_host,  mqtt_storage::read_topic(nvs).str(), mqtt_config.ca_cert, mqtt_config.client_cert, mqtt_config.client_key};
+		cout << "connecting to MQTT broker " << mqtt_config.broker_host << ".." << endl;
+		mqtt_wrapper publisher{mqtt_config.broker_host,  mqtt_storage::read_topic(nvs).card_reader_str(), mqtt_config.ca_cert, mqtt_config.client_cert, mqtt_config.client_key};
 		auto is_mqtt_connected = publisher.is_connected();
 		if (is_mqtt_connected.wait_for(5s) != future_status::ready) throw runtime_error{"MQTT connection timeout"};
 

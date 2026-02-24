@@ -14,7 +14,6 @@
 #include "open_message_builder.h"
 #include "setup.h"
 
-#include <rapidjson/memorystream.h>
 #include "rapidjson/reader.h"
 #include "rapidjson/error/en.h"
 
@@ -66,8 +65,9 @@ span<const uint8_t> get_client_key()
 class ConstStream final
 {
 public:
+	ConstStream(const span<const uint8_t>& chars) noexcept : i{0}, chars{chars} {}
+
 	typedef char Ch;
-	ConstStream(const span<const uint8_t>& chars) noexcept : i{0}, chars{chars} { }
 	Ch Peek() const { return static_cast<char>(chars[i]); }
 	Ch Take() { return static_cast<char>(chars[i++]); }
 	size_t Tell() const { return chars.size(); }
@@ -117,22 +117,46 @@ extern "C" void app_main(void)
 		connection.start();
 		if (connection.is_up().wait_for(20s) != future_status::ready) throw runtime_error{"WiFi connection timeout"};
 
-		cout << "connecting to MQTT broker.." << endl;
-		mqtt_wrapper listener{mqtt_config.broker_host,  mqtt_storage::read_topic(nvs).str(), mqtt_config.ca_cert, mqtt_config.client_cert, mqtt_config.client_key};
+		cout << "connecting to MQTT broker " << mqtt_config.broker_host << ".." << endl;
+		const auto topic = mqtt_storage::read_topic(nvs);
+		mqtt_wrapper listener{mqtt_config.broker_host, topic.door_opener_str(), mqtt_config.ca_cert, mqtt_config.client_cert, mqtt_config.client_key};
 		auto is_mqtt_connected = listener.is_connected();
 		if (is_mqtt_connected.wait_for(5s) != future_status::ready) throw runtime_error{"MQTT connection timeout"};
 
-		listener.subscribe([](const auto& data)
+		cout << "subscribing to topic " << topic.door_opener_str() << endl;
+		if (!listener.subscribe([](const auto& data)
 		{
 			// TODO:
-			cout << "received MQTT message with length " << data.size() << endl;
+			string_view text(reinterpret_cast<const char*>(data.data()), data.size());
+			cout << "received message: " << text << endl;
+
 			OpenMessageBuilder message{};
 			ConstStream stream{data};
-			rapidjson::Reader{}.Parse(stream, message);
-		});
+			try
+			{
+				rapidjson::Reader{}.Parse(stream, message);
+				if (message.is_valid())
+				{
+					// TODO: pure debug, need to notify timer task that operates GPIO
+					cout << (message.get_open() ? "open" : "do not open") << " for " << message.get_user() << endl;
+				}
+			}
+			catch (const exception& e)
+			{
+				cout << "malformatted open message" << endl << e.what() << endl;
+			}
+		}))
+		{
+			throw runtime_error {"MQTT subscription failed"};
+		}
 
-		// TODO
-		while (true) this_thread::sleep_for(1s);
+		cout << "waiting for messages" << endl;
+
+		while (true) this_thread::sleep_for(10ms);
+		//auto is_mqtt_disconnected = listener.is_connected();
+		//is_mqtt_disconnected.wait();
+
+		cout << "MQTT disconnected" << endl;
 	}
 	catch (const exception &e)
 	{

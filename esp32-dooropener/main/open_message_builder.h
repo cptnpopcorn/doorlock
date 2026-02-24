@@ -8,15 +8,17 @@
 class OpenMessageBuilder final : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>, OpenMessageBuilder>
 {
 public:
-
 	OpenMessageBuilder() noexcept;
 
 	bool Key(const char* str, rapidjson::SizeType length, bool);
 	bool String(const char* str, rapidjson::SizeType length, bool);
 	bool Bool(bool b);
 
-private:
+	bool is_valid() const noexcept;
+	bool get_open() const noexcept;
+	std::string_view get_user() const noexcept;
 
+private:
 	void unexpected_bool(const bool&);
 	void unexpected_string(const std::string_view& s);
 	void parse_open(const bool& b);

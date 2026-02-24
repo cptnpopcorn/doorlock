@@ -83,6 +83,11 @@ bool mqtt_wrapper::subscribe(std::function<void(const std::span<const uint8_t> &
 	return subscribe_id >= 0;
 }
 
+std::future<void> mqtt_wrapper::is_disconnected() noexcept
+{
+	return disconnected.get_future();
+}
+
 mqtt_wrapper::~mqtt_wrapper()
 {
 	check(esp_mqtt_client_stop(client), "stop mqtt client");
@@ -111,6 +116,10 @@ void mqtt_wrapper::handle_event(esp_event_base_t base, int32_t id, void *data)
 			auto e = reinterpret_cast<esp_mqtt_event_handle_t>(data);
 			receive({reinterpret_cast<uint8_t*>(e->data), static_cast<size_t>(e->data_len)});
 		}
+		return;
+
+	case MQTT_EVENT_DISCONNECTED:
+		disconnected.set_value();
 		return;
 
 	default:

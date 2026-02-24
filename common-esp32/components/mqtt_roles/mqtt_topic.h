@@ -11,7 +11,8 @@ public:
 		const std::string &topic_room,
 		const std::string &topic_door);
 
-	std::string str() const;
+	std::string card_reader_str() const;
+	std::string door_opener_str() const;
 
 	const std::string topic_site;
 	const std::string topic_room;

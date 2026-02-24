@@ -22,6 +22,7 @@ private:
 	void show_config();
 	void set_topic(const char* key);
 	void test_publish();
+	void test_subscribe();
 
 	interaction& quit;
 	wifi_station& wifi;

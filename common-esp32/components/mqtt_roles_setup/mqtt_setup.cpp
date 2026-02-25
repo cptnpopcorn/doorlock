@@ -81,8 +81,7 @@ void mqtt_setup::test_publish()
     wifi_connection connection{wifi};
 	connection.start();
 
-	auto is_wifi_up = connection.is_up();
-	if (is_wifi_up.wait_for(5s) != future_status::ready)
+	if (!connection.wait_is_up(pdMS_TO_TICKS(5'000)))
 	{
 		cout << "WiFi connection timeout" << endl;
 		return;
@@ -113,8 +112,7 @@ void mqtt_setup::test_subscribe()
     wifi_connection connection{wifi};
 	connection.start();
 
-	auto is_wifi_up = connection.is_up();
-	if (is_wifi_up.wait_for(5s) != future_status::ready)
+	if (!connection.wait_is_up(pdMS_TO_TICKS(5'000)))
 	{
 		cout << "WiFi connection timeout" << endl;
 		return;

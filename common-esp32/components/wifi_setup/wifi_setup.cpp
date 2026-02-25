@@ -66,9 +66,8 @@ void wifi_setup::test_connect()
   connection.start();
 
   cout << "getting IP address";
-  auto is_up = connection.is_up();
   for ([[maybe_unused]] auto i = 10; i != 0; --i) {
-    if (is_up.wait_for(1s) == future_status::ready) {
+    if (connection.wait_is_up(pdMS_TO_TICKS(1'000))) {
       cout << endl << "address sucessfully assigned" << endl;
       return;
     }

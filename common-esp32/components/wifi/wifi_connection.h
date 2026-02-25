@@ -3,10 +3,6 @@
 
 #include <event_handle.h>
 
-#include <functional>
-#include <future>
-#include <utility>
-
 class wifi_station;
 
 class wifi_connection final
@@ -18,7 +14,7 @@ public:
 	wifi_connection& operator=(wifi_connection&) = delete;
 
 	void start();
-	std::future<void> is_up();
+	bool wait_is_up(TickType_t ticks);
 
 	~wifi_connection();
 
@@ -27,7 +23,7 @@ public:
 	void handle_ip_event(esp_event_base_t base, int32_t id, void* data);
 	event_handle wifi_event_handle;
 	event_handle ip_event_handle;
-	std::promise<void> up;
+	TaskHandle_t owner;
 	wifi_station& sta;
 };
 

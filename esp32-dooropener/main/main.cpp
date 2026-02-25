@@ -120,8 +120,7 @@ extern "C" void app_main(void)
 		cout << "connecting to MQTT broker " << mqtt_config.broker_host << ".." << endl;
 		const auto topic = mqtt_storage::read_topic(nvs);
 		mqtt_wrapper listener{mqtt_config.broker_host, topic.door_opener_str(), mqtt_config.ca_cert, mqtt_config.client_cert, mqtt_config.client_key};
-		auto is_mqtt_connected = listener.is_connected();
-		if (is_mqtt_connected.wait_for(5s) != future_status::ready) throw runtime_error{"MQTT connection timeout"};
+		if (!listener.wait_is_connected(pdMS_TO_TICKS(5'000))) throw runtime_error{"MQTT connection timeout"};
 
 		cout << "subscribing to topic " << topic.door_opener_str() << endl;
 		if (!listener.subscribe([](const auto& data)
@@ -150,12 +149,8 @@ extern "C" void app_main(void)
 			throw runtime_error {"MQTT subscription failed"};
 		}
 
-		cout << "waiting for messages" << endl;
-
-		while (true) this_thread::sleep_for(10ms);
-		//auto is_mqtt_disconnected = listener.is_connected();
-		//is_mqtt_disconnected.wait();
-
+		cout << "waiting for messages.." << endl;
+		listener.wait_is_disconnected(portMAX_DELAY);
 		cout << "MQTT disconnected" << endl;
 	}
 	catch (const exception &e)

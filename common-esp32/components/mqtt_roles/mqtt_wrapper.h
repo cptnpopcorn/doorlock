@@ -6,7 +6,6 @@
 #include <condition_variable>
 #include <cstdint>
 #include <functional>
-#include <future>
 #include <mutex>
 #include <span>
 #include <string>
@@ -20,19 +19,17 @@ public:
 		const std::span<const uint8_t>& client_cert,
 		const std::span<const uint8_t>& client_key);
 
-	std::future<void> is_connected() noexcept;
+	bool wait_is_connected(TickType_t timeout);
 	bool publish(const std::span<const uint8_t>&);
 	bool subscribe(std::function<void(const std::span<const uint8_t>&)> receive);
-	std::future<void> is_disconnected() noexcept;
+	bool wait_is_disconnected(TickType_t timeout);
 
 	~mqtt_wrapper();
 
 private:
 	void handle_event(esp_event_base_t base, int32_t id, void* data);
 
-	std::promise<void> connected;
-	std::promise<void> disconnected;
-
+	EventGroupHandle_t events;
 	esp_mqtt_client_handle_t client;
 	mqtt_event_handle event_handle;
 	std::string topic;

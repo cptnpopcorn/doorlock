@@ -90,8 +90,7 @@ void mqtt_setup::test_publish()
 	mqtt_wrapper publisher{config.broker_host, mqtt_storage::read_topic(nvs).card_reader_str(), config.ca_cert, config.client_cert, config.client_key};
 
 	cout << "connecting to MQTT broker.." << endl;
-	auto is_mqtt_connected = publisher.is_connected();
-	if (is_mqtt_connected.wait_for(5s) != future_status::ready)
+	if (!publisher.wait_is_connected(pdMS_TO_TICKS(5'000)))
 	{
 		cout << "MQTT connection timeout" << endl;
 		return;
@@ -121,8 +120,7 @@ void mqtt_setup::test_subscribe()
 	mqtt_wrapper subscriber{config.broker_host, mqtt_storage::read_topic(nvs).door_opener_str(), config.ca_cert, config.client_cert, config.client_key};
 
 	cout << "connecting to MQTT broker.." << endl;
-	auto is_mqtt_connected = subscriber.is_connected();
-	if (is_mqtt_connected.wait_for(5s) != future_status::ready)
+	if (!subscriber.wait_is_connected(pdMS_TO_TICKS(5'000)))
 	{
 		cout << "MQTT connection timeout" << endl;
 		return;

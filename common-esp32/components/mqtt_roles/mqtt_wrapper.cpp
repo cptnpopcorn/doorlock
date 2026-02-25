@@ -15,6 +15,7 @@ mqtt_wrapper::mqtt_wrapper(
 	const span<const uint8_t> &ca_cert,
 	const span<const uint8_t> &client_cert,
 	const span<const uint8_t> &client_key) :
+	events{xEventGroupCreate()},
 	client{nullptr},
 	topic{topic},
 	receive { [](const auto&) {} }
@@ -52,9 +53,12 @@ mqtt_wrapper::mqtt_wrapper(
 	check(esp_mqtt_client_start(client), "MQTT start");
 }
 
-future<void> mqtt_wrapper::is_connected() noexcept
+static constexpr uint32_t MQTT_WRAPPER_EVENT_CONNECTED { 1 << 0 };
+static constexpr uint32_t MQTT_WRAPPER_EVENT_DISCONNECTED { 1 << 1 };
+
+bool mqtt_wrapper::wait_is_connected(TickType_t timeout)
 {
-	return connected.get_future();
+	return xEventGroupWaitBits(events, MQTT_WRAPPER_EVENT_CONNECTED, pdTRUE, pdFALSE, timeout) == MQTT_WRAPPER_EVENT_CONNECTED;
 }
 
 bool mqtt_wrapper::publish(const std::span<const uint8_t> &id)
@@ -83,16 +87,9 @@ bool mqtt_wrapper::subscribe(std::function<void(const std::span<const uint8_t> &
 	return subscribe_id >= 0;
 }
 
-std::future<void> mqtt_wrapper::is_disconnected() noexcept
+bool mqtt_wrapper::wait_is_disconnected(TickType_t timeout)
 {
-	return disconnected.get_future();
-}
-
-mqtt_wrapper::~mqtt_wrapper()
-{
-	check(esp_mqtt_client_stop(client), "stop mqtt client");
-	event_handle = {};
-	check(esp_mqtt_client_destroy(client), "release mqtt client");
+	return xEventGroupWaitBits(events, MQTT_WRAPPER_EVENT_DISCONNECTED, pdTRUE, pdFALSE, timeout) == MQTT_WRAPPER_EVENT_DISCONNECTED;
 }
 
 void mqtt_wrapper::handle_event(esp_event_base_t base, int32_t id, void *data)
@@ -100,7 +97,7 @@ void mqtt_wrapper::handle_event(esp_event_base_t base, int32_t id, void *data)
 	switch (static_cast<esp_mqtt_event_id_t>(id))
 	{
 	case MQTT_EVENT_CONNECTED:
-		connected.set_value();
+		xEventGroupSetBits(events, MQTT_WRAPPER_EVENT_CONNECTED);
 		return;
 
 	case MQTT_EVENT_PUBLISHED:
@@ -119,10 +116,17 @@ void mqtt_wrapper::handle_event(esp_event_base_t base, int32_t id, void *data)
 		return;
 
 	case MQTT_EVENT_DISCONNECTED:
-		disconnected.set_value();
+		xEventGroupSetBits(events, MQTT_WRAPPER_EVENT_DISCONNECTED);
 		return;
 
 	default:
 		return;
 	}
+}
+
+mqtt_wrapper::~mqtt_wrapper()
+{
+	check(esp_mqtt_client_stop(client), "stop mqtt client");
+	event_handle = {};
+	check(esp_mqtt_client_destroy(client), "release mqtt client");
 }

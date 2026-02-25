@@ -14,7 +14,7 @@ public:
 	wifi_connection& operator=(wifi_connection&) = delete;
 
 	void start();
-	bool wait_is_up(TickType_t ticks);
+	bool wait_is_up(TickType_t timeout);
 
 	~wifi_connection();
 
@@ -23,7 +23,7 @@ public:
 	void handle_ip_event(esp_event_base_t base, int32_t id, void* data);
 	event_handle wifi_event_handle;
 	event_handle ip_event_handle;
-	TaskHandle_t owner;
+	EventGroupHandle_t events;
 	wifi_station& sta;
 };
 

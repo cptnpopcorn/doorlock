@@ -1,10 +1,10 @@
-set(COMMON_CONFIG_DIR ${CMAKE_CURRENT_LIST_DIR}/../../common/config)
+set(COMMON_DIR ${CMAKE_CURRENT_LIST_DIR}/../../common)
+set(COMMON_CONFIG_DIR ${COMMON_DIR}/config)
 include(${COMMON_CONFIG_DIR}/config.cmake)
 
 idf_component_register(
 	SRCS
 		"main.cpp"
-		"open_message_builder.cpp"
 		"setup.cpp"
 	PRIV_REQUIRES
 		interaction
@@ -17,8 +17,9 @@ idf_component_register(
 		storage
 		esp_event
 		driver
-		rapidjson
 	INCLUDE_DIRS
 		${COMMON_GENERATED_DIR}
 		${COMMON_CONFIG_DIR}
 )
+
+target_link_libraries(${COMPONENT_LIB} PRIVATE messages rapidjson)

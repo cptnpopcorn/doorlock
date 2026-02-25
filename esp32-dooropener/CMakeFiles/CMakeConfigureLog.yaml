@@ -1,0 +1,13 @@
+
+---
+events:
+  -
+    kind: "message-v1"
+    backtrace:
+      - "C:/Users/hagen/.espressif/tools/cmake/3.30.2/share/cmake-3.30/Modules/CMakeDetermineSystem.cmake:200 (message)"
+      - "C:/Users/hagen/esp/v5.5.1/esp-idf/tools/cmake/project.cmake:589 (__project)"
+      - "CMakeLists.txt:9 (project)"
+    message: |
+      The target system is: Generic -  - 
+      The host system is: Windows - 10.0.26200 - AMD64
+...

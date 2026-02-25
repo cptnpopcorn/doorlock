@@ -1,5 +1,4 @@
 #include "open_message_builder.h"
-#include <stdexcept>
 
 using namespace std;
 
@@ -26,8 +25,7 @@ bool OpenMessageBuilder::Key(const char *str, rapidjson::SizeType length, bool)
 		parse_string = &OpenMessageBuilder::parse_user;
 	}
 
-
-	return false;
+	return true;
 }
 
 bool OpenMessageBuilder::String(const char *str, rapidjson::SizeType length, bool)
@@ -59,12 +57,10 @@ string_view OpenMessageBuilder::get_user() const noexcept
 
 void OpenMessageBuilder::unexpected_bool(const bool &)
 {
-	throw runtime_error {"invalid JSON input (unexpected bool)"};
 }
 
 void OpenMessageBuilder::unexpected_string(const string_view &s)
 {
-	throw runtime_error {"invalid JSON input (unexpected string)"};
 }
 
 void OpenMessageBuilder::parse_open(const bool &b)

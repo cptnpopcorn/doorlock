@@ -11,6 +11,7 @@
 #include "secrets.h"
 #include "wifi_connection.h"
 #include "wifi_station.h"
+#include "const_stream.h"
 #include "open_message_builder.h"
 #include "setup.h"
 
@@ -61,25 +62,6 @@ span<const uint8_t> get_client_key()
     return {};
 }
 #endif
-
-class ConstStream final
-{
-public:
-	ConstStream(const span<const uint8_t>& chars) noexcept : i{0}, chars{chars} {}
-
-	typedef char Ch;
-	Ch Peek() const { return static_cast<char>(chars[i]); }
-	Ch Take() { return static_cast<char>(chars[i++]); }
-	size_t Tell() const { return chars.size(); }
-	Ch* PutBegin() { assert(false); return 0; }
- 	void Put(Ch) { assert(false); }
- 	void Flush() { assert(false); }
- 	size_t PutEnd(Ch*) { assert(false); return 0; }
-
-private:
-	size_t i;
-	const span<const uint8_t>& chars;
-};
 
 extern "C" void app_main(void)
 {
@@ -138,6 +120,10 @@ extern "C" void app_main(void)
 				{
 					// TODO: pure debug, need to notify timer task that operates GPIO
 					cout << (message.get_open() ? "open" : "do not open") << " for " << message.get_user() << endl;
+				}
+				else
+				{
+					cout << "invalid message format" << endl;
 				}
 			}
 			catch (const exception& e)

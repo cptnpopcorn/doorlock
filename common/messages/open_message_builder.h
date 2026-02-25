@@ -1,8 +1,11 @@
+#ifndef C246242D_8CC7_4613_A282_CD5763762394
+#define C246242D_8CC7_4613_A282_CD5763762394
 #ifndef A0AA2569_7694_4014_B37B_C7EE43FE43A0
 #define A0AA2569_7694_4014_B37B_C7EE43FE43A0
 
 #include "rapidjson/reader.h"
 #include "rapidjson/error/en.h"
+
 #include <string>
 
 class OpenMessageBuilder final : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>, OpenMessageBuilder>
@@ -36,3 +39,6 @@ private:
 };
 
 #endif /* A0AA2569_7694_4014_B37B_C7EE43FE43A0 */
+
+
+#endif /* C246242D_8CC7_4613_A282_CD5763762394 */

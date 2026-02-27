@@ -89,10 +89,14 @@ extern "C" void app_main(void)
 			usb_serial_jtag_vfs_use_driver();
 
 			interaction_loop loop{};
-			setup s{loop.stop(), wifi, mqtt_config, nvs};
+			setup s{loop.stop(), wifi, mqtt_config, nvs, static_cast<gpio_num_t>(CONFIG_RELAY_GPIO_PIN)};
 			loop.set(s);
 			loop.start();
 		}
+
+		// GPIO relay operation
+		cout << "starting relay controller.." << endl;
+		RelayController relay {pdMS_TO_TICKS(2'000), static_cast<gpio_num_t>(CONFIG_RELAY_GPIO_PIN)};
 
 		cout << "connecting WiFi.." << endl;
 		wifi_connection connection{wifi};
@@ -105,12 +109,8 @@ extern "C" void app_main(void)
 		if (!listener.wait_is_connected(pdMS_TO_TICKS(5'000))) throw runtime_error{"MQTT connection timeout"};
 
 		cout << "subscribing to topic " << topic.door_opener_str() << endl;
-		if (!listener.subscribe([](const auto& data)
+		if (!listener.subscribe([&relay](const auto& data)
 		{
-			// TODO:
-			string_view text(reinterpret_cast<const char*>(data.data()), data.size());
-			cout << "received message: " << text << endl;
-
 			OpenMessageBuilder message{};
 			ConstStream stream{data};
 			try
@@ -118,8 +118,8 @@ extern "C" void app_main(void)
 				rapidjson::Reader{}.Parse(stream, message);
 				if (message.is_valid())
 				{
-					// TODO: pure debug, need to notify timer task that operates GPIO
 					cout << (message.get_open() ? "open" : "do not open") << " for " << message.get_user() << endl;
+					relay.Close();
 				}
 				else
 				{

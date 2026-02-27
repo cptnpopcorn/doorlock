@@ -1,4 +1,4 @@
-menu "MQTT"
+menu "Doorlock / MQTT"
 	config MQTT_BROKER_HOSTNAME
 		string "broker hostname"
 		default "test.mosquitto.org"

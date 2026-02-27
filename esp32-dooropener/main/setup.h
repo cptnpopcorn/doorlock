@@ -4,6 +4,7 @@
 #include "interaction.h"
 #include "mqtt_setup.h"
 #include "wifi_setup.h"
+#include "relay_controller.h"
 
 class setup final : public interaction
 {
@@ -12,7 +13,8 @@ public:
 		interaction& quit,
 		wifi_station& wifi,
 		const mqtt_config& mqtt_config,
-		nvs_access& nvs) noexcept;
+		nvs_access& nvs,
+		gpio_num_t relayPin) noexcept;
 
 	void start(interaction_control&) override;
 
@@ -22,6 +24,7 @@ private:
 	interaction &quit;
 	wifi_setup wifi;
 	mqtt_setup mqtt;
+	RelayController relay;
 };
 
 #endif /* B15E82B3_0118_4B54_AB70_45B5D0DA522A */

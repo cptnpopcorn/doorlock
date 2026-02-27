@@ -1,4 +1,4 @@
-menu "MQTT"
+menu "Doorlock / MQTT"
 	config MQTT_BROKER_HOSTNAME
 		string "broker hostname"
 		default "test.mosquitto.org"
@@ -13,10 +13,18 @@ menu "MQTT"
 
 	if MQTT_USE_TLS
 	config MQTT_TLS_CLIENT_AUTH
-	depends on MQTT_USE_TLS
-	bool "MQTT use client authentication (TLS)"
-	default false
-	help
-		Authenticate this client against the broker. The client certificate needs to be present in common/config/client.crt, the key in common/config/client.key
+		depends on MQTT_USE_TLS
+		bool "MQTT use client authentication (TLS)"
+		default false
+		help
+			Authenticate this client against the broker. The client certificate needs to be present in common/config/client.crt, the key in common/config/client.key
 	endif
+endmenu
+
+menu "Doorlock / Relay"
+	config RELAY_GPIO_PIN
+	int "GPIO pin number"
+	default 20
+	help
+		3.3V pin configured as output to control the relay. Not to drive the solenoid directly: it needs a control circuit that can be driven be a logic signal.
 endmenu

@@ -2212,21 +2212,27 @@ CONFIG_WIFI_PROV_STA_ALL_CHANNEL_SCAN=y
 # end of Wi-Fi Provisioning Manager
 
 #
-# MQTT
+# Doorlock / MQTT
 #
 CONFIG_MQTT_BROKER_HOSTNAME="test.mosquitto.org"
 # CONFIG_MQTT_USE_TLS is not set
-# end of MQTT
+# end of Doorlock / MQTT
 
 #
-# PN532 GPIO Pins
+# Doorlock / Relay
+#
+CONFIG_RELAY_GPIO_PIN=20
+# end of Doorlock / Relay
+
+#
+# Doorlock / PN532 GPIO Pins
 #
 CONFIG_PN532_SPI_CS_PIN_NUMBER=16
 CONFIG_PN532_RSTPD_PIN_NUMBER=17
 CONFIG_PN532_SPI_MISO_PIN_NUMBER=21
 CONFIG_PN532_SPI_MOSI_PIN_NUMBER=22
 CONFIG_PN532_SPI_SCK_PIN_NUMBER=23
-# end of PN532 GPIO Pins
+# end of Doorlock / PN532 GPIO Pins
 # end of Component config
 
 # CONFIG_IDF_EXPERIMENTAL_FEATURES is not set

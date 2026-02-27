@@ -1,4 +1,4 @@
-menu "PN532 GPIO Pins"
+menu "Doorlock / PN532 GPIO Pins"
 
 config PN532_SPI_CS_PIN_NUMBER
 	int "SPI Chip Select GPIO Pin Number"

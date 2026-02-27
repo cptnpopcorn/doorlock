@@ -6,6 +6,7 @@ idf_component_register(
 	SRCS
 		"main.cpp"
 		"setup.cpp"
+		"relay_controller.cpp"
 	PRIV_REQUIRES
 		interaction
 		error

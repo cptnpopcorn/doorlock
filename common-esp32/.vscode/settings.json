@@ -1,3 +1,4 @@
 {
-	"C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools"
+	"C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
+	"cmake.sourceDirectory": "C:/Users/hagen/Documents/doorlock/common-esp32/components/error"
 }

@@ -18,16 +18,22 @@ wifi_station::wifi_station(nvs_access&) : interface{} {
 
   wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
   check(esp_wifi_init(&cfg), "WiFi driver initialization");
+
+  check(esp_wifi_set_mode(WIFI_MODE_STA), "setting WiFi station mode");
 }
 
 void wifi_station::scan(wifi_scan_visitor& monitor) {
   check(esp_wifi_start(), "WiFi start");
+  auto stop_wifi = [] {
+	check(esp_wifi_stop(), "WiFi stop after scan");
+  };
+  auto stop_wifi_guard = make_guard(stop_wifi);
+
+  check(esp_wifi_scan_start(nullptr, true), "WiFi scan");
   auto stop_scan = [] {
     check(esp_wifi_clear_ap_list(), "WiFi clear scan list");
-    check(esp_wifi_stop(), "WiFi stop after scan");
   };
-  auto stop_guard = make_guard(stop_scan);
-  check(esp_wifi_scan_start(nullptr, true), "WiFi scan");
+  auto stop_scan_guard = make_guard(stop_scan);
 
   wifi_ap_record_t record{};
   while (true) {

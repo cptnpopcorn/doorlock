@@ -65,8 +65,8 @@ bool mqtt_wrapper::publish(const std::span<const uint8_t> &id)
 {
 	ostringstream msg;
 	msg << R"({"ID":")";
-	msg << hex << setw(2) << setfill('0');
-	for (const auto& octet : id) msg << (int)octet;
+	msg << hex << setfill('0');
+	for (const auto& octet : id) msg << setw(2) << (int)octet;
 	msg << R"("})";
 
 	const auto str = msg.str();

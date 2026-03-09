@@ -10,16 +10,17 @@
 
 using namespace std;
 
-wifi_station::wifi_station(nvs_access&) : interface{} {
-  check(esp_netif_init(), "network interface initialization");
+wifi_station::wifi_station(nvs_access&) : interface{}
+{
+	check(esp_netif_init(), "network interface initialization");
 
-  interface = esp_netif_create_default_wifi_sta();
-  if (interface == nullptr) error("WiFi station interface creation");
+	interface = esp_netif_create_default_wifi_sta();
+	if (interface == nullptr) error("WiFi station interface creation");
 
-  wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-  check(esp_wifi_init(&cfg), "WiFi driver initialization");
-
-  check(esp_wifi_set_mode(WIFI_MODE_STA), "setting WiFi station mode");
+	wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+	check(esp_wifi_init(&cfg), "WiFi driver initialization");
+	check(esp_wifi_set_mode(WIFI_MODE_STA), "setting WiFi station mode");
+	check(esp_wifi_set_ps(WIFI_PS_NONE), "disabling WiFi power saving");
 }
 
 void wifi_station::scan(wifi_scan_visitor& monitor) {

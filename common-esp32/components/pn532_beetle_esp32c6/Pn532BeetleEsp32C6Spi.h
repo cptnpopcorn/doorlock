@@ -1,9 +1,10 @@
 #ifndef ABCF1141_BA26_445B_8FDC_33A64445EF1F
 #define ABCF1141_BA26_445B_8FDC_33A64445EF1F
 
-#include <PN532Interface.h>
-#include <ControllerFrameWriter.h>
-#include <FrameFormatter.h>
+#include "PN532Interface.h"
+#include "ControllerFrameWriter.h"
+#include "FrameFormatter.h"
+#include "hw_timer.h"
 #include <chrono>
 #include <cstdint>
 #include <span>
@@ -38,6 +39,7 @@ private:
 	spi_device_handle_t handle;
 	FrameFormatter formatter;
 	const std::chrono::milliseconds timeout;
+	HwTimer timer;
 };
 
 #endif /* ABCF1141_BA26_445B_8FDC_33A64445EF1F */

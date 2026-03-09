@@ -28,7 +28,8 @@ namespace Pins
 Pn532BeetleEsp32C6Spi::Pn532BeetleEsp32C6Spi(const chrono::milliseconds &timeout) :
 	handle{nullptr},
 	formatter{},
-	timeout{timeout}
+	timeout{timeout},
+	timer{}
 {
 	gpio_config_t rst_conf {};
 	rst_conf.pin_bit_mask = 1ULL << Pins::Rstpd;
@@ -149,7 +150,8 @@ bool Pn532BeetleEsp32C6Spi::ReadFrame(TargetFrameWriter &writer)
 			if ((rdy[0] & 0b1) == 0b1) break;
 		}
 
-		this_thread::sleep_for(1ms);
+		timer.Start(1ms);
+		timer.Wait();
 	}
 
 	if (!t.IsRunning()) return false;
@@ -182,13 +184,15 @@ bool Pn532BeetleEsp32C6Spi::ReadFrame(TargetFrameWriter &writer)
 void Pn532BeetleEsp32C6Spi::AssertChipSelect()
 {
 	gpio_set_level(Pins::Cs, 0);
-	this_thread::sleep_for(2ms);
+	timer.Start(2ms);
+	timer.Wait();
 }
 
 void Pn532BeetleEsp32C6Spi::DeassertChipSelect()
 {
 	gpio_set_level(Pins::Cs, 1);
-	this_thread::sleep_for(2ms);
+	timer.Start(2ms);
+	timer.Wait();
 }
 
 void Pn532BeetleEsp32C6Spi::Write(const std::span<const uint8_t> &data)

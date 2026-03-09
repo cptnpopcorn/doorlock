@@ -22,6 +22,7 @@ mqtt_wrapper::mqtt_wrapper(
 {
 	esp_mqtt_client_config_t config{};
 	config.broker.address.hostname = broker_host.c_str();
+	config.session.keepalive = 10;
 
 	if (ca_cert.size() != 0)
 	{
@@ -47,8 +48,7 @@ mqtt_wrapper::mqtt_wrapper(
 	}
 
 	client = esp_mqtt_client_init(&config);
-	if (client == nullptr)
-		throw runtime_error("MQTT client creation");
+	if (client == nullptr) throw runtime_error("MQTT client creation");
 	event_handle = mqtt_register_event(client, MQTT_EVENT_ANY, this, BOUNCE(mqtt_wrapper, handle_event));
 	check(esp_mqtt_client_start(client), "MQTT start");
 }
@@ -115,6 +115,7 @@ void mqtt_wrapper::handle_event(esp_event_base_t base, int32_t id, void *data)
 		}
 		return;
 
+	case MQTT_EVENT_ERROR:
 	case MQTT_EVENT_DISCONNECTED:
 		xEventGroupSetBits(events, MQTT_WRAPPER_EVENT_DISCONNECTED);
 		return;

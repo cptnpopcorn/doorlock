@@ -1,0 +1,12 @@
+# Hardware Documentation
+
+This gives some ideas about the hardware used, but without being overly precise. The way I built this first version is probably not optimal for producing it in numbers.
+The electronic components to protect from flyback current or DC variations and oscillations are mounted on small pieces of stripboard (with 0.1 inch hole distance),
+either 9 x 13 holes or 9 x 9 holes, and screwed to the housing using small M2 inserts, or M3 inserts where possible (also for the case).
+                                                                                                                     
+## Fire Safety
+
+Instead of common PLA, the cases can be printed using filament of type SPECTRUM PETG FR V0 Natural, 1.75mm. This is self-extinguishing after 10 seconds,
+rated UL 94 V-0 and appropriate for permanent installations.
+
+For the cabling between the boxes, and the door strike, LAPP UNITRONIC® LiHH 2 x 0.25 mm² is a good choice. it is certified IEC 60332-1-2 and halogen-free (LSZH), producing less smoke.
